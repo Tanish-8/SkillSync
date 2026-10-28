@@ -11,6 +11,12 @@ import {
   Clock,
   Sparkles,
   HelpCircle,
+  GraduationCap,
+  Award,
+  FolderGit2,
+  Lightbulb,
+  MessageSquare,
+  X,
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -48,6 +54,21 @@ const WORKING_STYLE_OPTIONS = [
   { value: 'mixed', label: 'Mixed / Hybrid', desc: 'Balance of scheduled checkpoints and autonomous work' },
 ];
 
+const LEARNING_STYLE_OPTIONS = [
+  { value: 'visual', label: 'Visual', desc: 'Architecture diagrams, visual flows, conceptual mindmaps, and graphical models' },
+  { value: 'reading', label: 'Reading & Writing', desc: 'Technical specifications, documentation, written walkthroughs, and code comments' },
+  { value: 'hands_on', label: 'Hands-on Practice', desc: 'Live coding, test-driven implementations, interactive debugging, and code labs' },
+  { value: 'discussion', label: 'Discussion & Verbal', desc: 'Pair programming, brainstorming debates, oral design reviews, and study circles' },
+  { value: 'mixed', label: 'Mixed / Adaptable', desc: 'Versatile combination of practical exercises, documentation, and verbal syncs' },
+];
+
+const GRADE_SCALE_OPTIONS = [
+  { value: '', label: 'Not specified (Optional)' },
+  { value: 'percentage', label: 'Percentage (0 - 100%)' },
+  { value: 'gpa_10', label: 'GPA (Scale of 10.0)' },
+  { value: 'gpa_4', label: 'GPA (Scale of 4.0)' },
+];
+
 const TIMELINE_OPTIONS = [
   { value: 'short_term', label: 'Short Term (Sprint / Hackathon)' },
   { value: 'full_semester', label: 'Full Semester (Course project / Capstone)' },
@@ -71,7 +92,7 @@ export function ProfilePage() {
   const [isNewProfile, setIsNewProfile] = useState(false);
   const [completeness, setCompleteness] = useState(null);
 
-  // Form State
+  // General & Technical Skills
   const [bio, setBio] = useState('');
   const [skills, setSkills] = useState([]);
   const [timeSlots, setTimeSlots] = useState([]);
@@ -80,7 +101,22 @@ export function ProfilePage() {
   const [timeline, setTimeline] = useState('full_semester');
   const [workingStyle, setWorkingStyle] = useState('mixed');
 
-  // Study Preferences
+  // Academic Background
+  const [degree, setDegree] = useState('');
+  const [branch, setBranch] = useState('');
+  const [yearOfStudy, setYearOfStudy] = useState('3');
+  const [semester, setSemester] = useState('5');
+  const [relevantSubjects, setRelevantSubjects] = useState([]);
+  const [subjectInput, setSubjectInput] = useState('');
+
+  // Academic Performance (Optional)
+  const [performanceScale, setPerformanceScale] = useState('');
+  const [performanceScore, setPerformanceScore] = useState('');
+
+  // Learning Style
+  const [learningStyle, setLearningStyle] = useState('hands_on');
+
+  // Study Squad Preferences
   const [courseCode, setCourseCode] = useState('');
   const [topics, setTopics] = useState([]);
   const [topicInput, setTopicInput] = useState('');
@@ -90,6 +126,16 @@ export function ProfilePage() {
   // SkillSwap Preferences
   const [desiredSkills, setDesiredSkills] = useState([]);
   const [weeklyHours, setWeeklyHours] = useState('5');
+
+  // Project Ideas & Portfolio
+  const [projectIdeas, setProjectIdeas] = useState([]);
+  const [previousProjects, setPreviousProjects] = useState([]);
+
+  // Achievements & Collaboration Preferences
+  const [achievements, setAchievements] = useState([]);
+  const [achievementInput, setAchievementInput] = useState('');
+  const [collaborationPreferences, setCollaborationPreferences] = useState([]);
+  const [collabInput, setCollabInput] = useState('');
 
   // Load existing profile from backend
   useEffect(() => {
@@ -109,18 +155,44 @@ export function ProfilePage() {
         setGoals(Array.isArray(p.goals) ? p.goals : []);
         setTimeline(p.timeline || 'full_semester');
         setWorkingStyle(p.workingStyle || 'mixed');
+
+        // Academic background
+        const acad = p.academicBackground || {};
+        setDegree(acad.degree || '');
+        setBranch(acad.branch || '');
+        setYearOfStudy(acad.yearOfStudy !== undefined && acad.yearOfStudy !== null ? String(acad.yearOfStudy) : '3');
+        setSemester(acad.semester !== undefined && acad.semester !== null ? String(acad.semester) : '5');
+        setRelevantSubjects(Array.isArray(acad.relevantSubjects) ? acad.relevantSubjects : []);
+
+        // Academic performance
+        const perf = p.academicPerformance || {};
+        setPerformanceScale(perf.scale || '');
+        setPerformanceScore(perf.score !== undefined && perf.score !== null ? String(perf.score) : '');
+
+        // Learning style
+        setLearningStyle(p.learningStyle || 'hands_on');
+
+        // Study squad
         setCourseCode(p.courseCode || '');
         setTopics(Array.isArray(p.topics) ? p.topics : []);
         setLearningPreferences(Array.isArray(p.learningPreferences) ? p.learningPreferences : []);
+
+        // SkillSwap
         setDesiredSkills(Array.isArray(p.desiredSkills) ? p.desiredSkills : []);
         setWeeklyHours(p.weeklyHours !== undefined && p.weeklyHours !== null ? String(p.weeklyHours) : '5');
+
+        // Extended Phase 5D
+        setProjectIdeas(Array.isArray(p.projectIdeas) ? p.projectIdeas : []);
+        setPreviousProjects(Array.isArray(p.previousProjects) ? p.previousProjects : []);
+        setAchievements(Array.isArray(p.achievements) ? p.achievements : []);
+        setCollaborationPreferences(Array.isArray(p.collaborationPreferences) ? p.collaborationPreferences : []);
 
         setCompleteness(res.completeness);
         setIsNewProfile(false);
       } catch (err) {
         if (!isMounted) return;
         if (err.status === 404) {
-          // Fresh profile onboarding
+          // Fresh profile onboarding defaults
           setIsNewProfile(true);
           setSkills([
             { name: 'JavaScript', level: 3 },
@@ -129,6 +201,12 @@ export function ProfilePage() {
           setTimeSlots(['mon_afternoon', 'wed_afternoon', 'fri_afternoon']);
           setGoals(['portfolio', 'capstone']);
           setDesiredSkills([{ name: 'Python', targetLevel: 3 }]);
+          setDegree('Bachelor of Science / B.Tech');
+          setBranch('Computer Science');
+          setYearOfStudy('3');
+          setSemester('5');
+          setRelevantSubjects(['Data Structures', 'Web Development']);
+          setLearningStyle('hands_on');
         } else {
           setLoadError(err.message || 'Failed to load profile. Please verify your connection.');
         }
@@ -191,6 +269,43 @@ export function ProfilePage() {
     );
   };
 
+  // Project Ideas Handlers
+  const handleAddProjectIdea = () => {
+    setProjectIdeas((prev) => [...prev, { title: '', description: '', tags: [] }]);
+  };
+
+  const handleUpdateProjectIdea = (index, field, value) => {
+    setProjectIdeas((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
+
+  const handleRemoveProjectIdea = (index) => {
+    setProjectIdeas((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Previous Projects Handlers
+  const handleAddPreviousProject = () => {
+    setPreviousProjects((prev) => [
+      ...prev,
+      { title: '', role: '', skills: [], domain: [], achievements: '' },
+    ]);
+  };
+
+  const handleUpdatePreviousProject = (index, field, value) => {
+    setPreviousProjects((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
+
+  const handleRemovePreviousProject = (index) => {
+    setPreviousProjects((prev) => prev.filter((_, i) => i !== index));
+  };
+
   // Tag Adders
   const handleAddTag = (type) => {
     if (type === 'goal' && goalInput.trim()) {
@@ -205,6 +320,18 @@ export function ProfilePage() {
       const clean = prefInput.trim().toLowerCase().replace(/\s+/g, '_');
       if (!learningPreferences.includes(clean)) setLearningPreferences((prev) => [...prev, clean]);
       setPrefInput('');
+    } else if (type === 'subject' && subjectInput.trim()) {
+      const clean = subjectInput.trim();
+      if (!relevantSubjects.includes(clean)) setRelevantSubjects((prev) => [...prev, clean]);
+      setSubjectInput('');
+    } else if (type === 'achievement' && achievementInput.trim()) {
+      const clean = achievementInput.trim();
+      if (!achievements.includes(clean)) setAchievements((prev) => [...prev, clean]);
+      setAchievementInput('');
+    } else if (type === 'collab' && collabInput.trim()) {
+      const clean = collabInput.trim();
+      if (!collaborationPreferences.includes(clean)) setCollaborationPreferences((prev) => [...prev, clean]);
+      setCollabInput('');
     }
   };
 
@@ -215,7 +342,7 @@ export function ProfilePage() {
     setSaveSuccess(false);
     setSaveError(null);
 
-    // Frontend validations aligning with backend
+    // Validations
     if (bio && bio.length > 500) {
       setSaveError('Bio cannot exceed 500 characters.');
       setSaving(false);
@@ -257,6 +384,31 @@ export function ProfilePage() {
       return;
     }
 
+    // Validate academic performance score if scale is chosen
+    if (performanceScale) {
+      const scoreVal = parseFloat(performanceScore);
+      if (isNaN(scoreVal) || !Number.isFinite(scoreVal)) {
+        setSaveError('Please enter a valid numeric academic score or select "Not specified".');
+        setSaving(false);
+        return;
+      }
+      if (performanceScale === 'percentage' && (scoreVal < 0 || scoreVal > 100)) {
+        setSaveError('Percentage marks must be between 0 and 100.');
+        setSaving(false);
+        return;
+      }
+      if (performanceScale === 'gpa_10' && (scoreVal < 0 || scoreVal > 10)) {
+        setSaveError('GPA (out of 10.0) must be between 0 and 10.');
+        setSaving(false);
+        return;
+      }
+      if (performanceScale === 'gpa_4' && (scoreVal < 0 || scoreVal > 4)) {
+        setSaveError('GPA (out of 4.0) must be between 0 and 4.');
+        setSaving(false);
+        return;
+      }
+    }
+
     // Construct clean payload matching schema
     const payload = {
       bio: bio.trim() || undefined,
@@ -265,11 +417,44 @@ export function ProfilePage() {
       goals,
       timeline,
       workingStyle,
+      learningStyle,
+      academicBackground: {
+        degree: degree.trim() || undefined,
+        branch: branch.trim() || undefined,
+        yearOfStudy: yearOfStudy ? parseInt(yearOfStudy, 10) : undefined,
+        semester: semester ? parseInt(semester, 10) : undefined,
+        relevantSubjects: relevantSubjects.length > 0 ? relevantSubjects : undefined,
+      },
+      academicPerformance:
+        performanceScale && performanceScore !== ''
+          ? {
+              scale: performanceScale,
+              score: parseFloat(performanceScore),
+            }
+          : null, // explicit null clears academic performance in MongoDB
       courseCode: courseCode.trim() || undefined,
       topics,
       learningPreferences,
       desiredSkills: desiredSkills.map((d) => ({ name: d.name.trim(), targetLevel: d.targetLevel })),
       weeklyHours: hoursNum,
+      projectIdeas: projectIdeas
+        .map((idea) => ({
+          title: idea.title.trim(),
+          description: idea.description?.trim() || undefined,
+          tags: Array.isArray(idea.tags) && idea.tags.length > 0 ? idea.tags : undefined,
+        }))
+        .filter((idea) => idea.title.length > 0),
+      previousProjects: previousProjects
+        .map((proj) => ({
+          title: proj.title.trim(),
+          skills: Array.isArray(proj.skills) && proj.skills.length > 0 ? proj.skills : undefined,
+          domain: Array.isArray(proj.domain) && proj.domain.length > 0 ? proj.domain : undefined,
+          role: proj.role?.trim() || undefined,
+          achievements: proj.achievements?.trim() || undefined,
+        }))
+        .filter((proj) => proj.title.length > 0),
+      achievements: achievements.length > 0 ? achievements : undefined,
+      collaborationPreferences: collaborationPreferences.length > 0 ? collaborationPreferences : undefined,
     };
 
     try {
@@ -338,7 +523,7 @@ export function ProfilePage() {
         </div>
 
         <p className="text-xs text-text-muted leading-relaxed max-w-3xl">
-          Configure your technical skills, study preferences, and reciprocal tutoring commitments. The SkillSync compatibility engine evaluates these exact inputs deterministically to compute matches without guessing.
+          Configure your technical background, learning style, and collaboration goals. The SkillSync compatibility engine evaluates these exact inputs deterministically across Project, Study Buddy, and SkillSwap modes without guessing or inventing scores.
         </p>
       </section>
 
@@ -352,7 +537,7 @@ export function ProfilePage() {
           <div>
             <span className="font-semibold">Profile saved successfully.</span>
             <p className="mt-0.5 text-text-muted">
-              Your profile and mode readiness have been updated in the database.
+              Your profile, learning preferences, and mode readiness have been updated in the database.
             </p>
           </div>
         </div>
@@ -396,7 +581,7 @@ export function ProfilePage() {
             <p className="text-[11px] text-text-muted leading-relaxed">
               {completeness?.project?.isComplete
                 ? 'All required inputs declared.'
-                : `Missing: ${completeness?.project?.missingFields?.join(', ') || 'skills, timeSlots, goals, timeline, workingStyle'}`}
+                : `Missing: ${completeness?.project?.missingFields?.join(', ') || 'skills, timeSlots, goals, timeline, workingStyle, learningStyle'}`}
             </p>
           </div>
 
@@ -415,7 +600,7 @@ export function ProfilePage() {
             <p className="text-[11px] text-text-muted leading-relaxed">
               {completeness?.study?.isComplete
                 ? 'All required inputs declared.'
-                : `Missing: ${completeness?.study?.missingFields?.join(', ') || 'courseCode, topics, timeSlots, learningPreferences'}`}
+                : `Missing: ${completeness?.study?.missingFields?.join(', ') || 'courseCode, topics, timeSlots, learningPreferences, learningStyle'}`}
             </p>
           </div>
 
@@ -434,7 +619,7 @@ export function ProfilePage() {
             <p className="text-[11px] text-text-muted leading-relaxed">
               {completeness?.skillswap?.isComplete
                 ? 'All required inputs declared.'
-                : `Missing: ${completeness?.skillswap?.missingFields?.join(', ') || 'skills, desiredSkills, timeSlots, weeklyHours'}`}
+                : `Missing: ${completeness?.skillswap?.missingFields?.join(', ') || 'skills, desiredSkills, timeSlots, weeklyHours, learningStyle'}`}
             </p>
           </div>
         </div>
@@ -442,188 +627,340 @@ export function ProfilePage() {
 
       {/* 3. PROFILE EDITING FORM */}
       <form id="profile-form" noValidate onSubmit={handleSave} className="space-y-8">
-        {/* SECTION 1: GENERAL PROFILE & PROJECT INPUTS */}
+        {/* SECTION 1: ACADEMIC BACKGROUND & LEARNING STYLE */}
+        <Card className="p-6 space-y-6">
+          <div className="border-b border-border pb-4">
+            <div className="flex items-center gap-2 text-text-main">
+              <GraduationCap className="w-4 h-4 text-text-amber" />
+              <h2 className="font-serif text-lg font-medium">1. Academic Background & Learning Style</h2>
+            </div>
+            <p className="text-xs text-text-muted mt-1">
+              Your degree program, discipline, active subjects, and cognitive collaboration style.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label htmlFor="degree" className="text-xs font-medium text-text-main">Degree / Program</label>
+              <Input
+                id="degree"
+                value={degree}
+                onChange={(e) => setDegree(e.target.value)}
+                placeholder="e.g. B.Tech, B.S., M.S., BCA"
+                className="text-xs"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label htmlFor="branch" className="text-xs font-medium text-text-main">Branch / Discipline</label>
+              <Input
+                id="branch"
+                value={branch}
+                onChange={(e) => setBranch(e.target.value)}
+                placeholder="e.g. Computer Science & Engineering, Data Science"
+                className="text-xs"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label htmlFor="yearOfStudy" className="text-xs font-medium text-text-main">Year of Study</label>
+              <select
+                id="yearOfStudy"
+                value={yearOfStudy}
+                onChange={(e) => setYearOfStudy(e.target.value)}
+                className="w-full text-xs rounded-md border border-border bg-bg-card px-3 py-2 text-text-main focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                <option value="1">1st Year (Freshman)</option>
+                <option value="2">2nd Year (Sophomore)</option>
+                <option value="3">3rd Year (Junior)</option>
+                <option value="4">4th Year (Senior)</option>
+                <option value="5">5th Year / Dual Degree</option>
+                <option value="6">Graduate / Masters</option>
+                <option value="7">Doctoral / PhD</option>
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label htmlFor="semester" className="text-xs font-medium text-text-main">Current Semester</label>
+              <select
+                id="semester"
+                value={semester}
+                onChange={(e) => setSemester(e.target.value)}
+                className="w-full text-xs rounded-md border border-border bg-bg-card px-3 py-2 text-text-main focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                {[...Array(10)].map((_, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    Semester {i + 1}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Relevant Subjects */}
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-text-main">
+              Relevant Academic Subjects & Coursework
+            </label>
+            <div className="flex gap-2">
+              <Input
+                value={subjectInput}
+                onChange={(e) => setSubjectInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag('subject'))}
+                placeholder="e.g. Algorithms, Distributed Systems, Database Systems"
+                className="text-xs"
+              />
+              <Button type="button" onClick={() => handleAddTag('subject')} size="sm" variant="outline">
+                <Plus className="w-3.5 h-3.5 mr-1" /> Add Subject
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {relevantSubjects.map((sub, i) => (
+                <Badge
+                  key={i}
+                  variant="secondary"
+                  className="text-xs flex items-center gap-1 cursor-pointer"
+                  onClick={() => setRelevantSubjects((prev) => prev.filter((_, idx) => idx !== i))}
+                >
+                  <span>{sub}</span>
+                  <X className="w-3 h-3 hover:text-red-500" />
+                </Badge>
+              ))}
+              {relevantSubjects.length === 0 && (
+                <span className="text-[11px] text-text-muted italic">No specific coursework added yet.</span>
+              )}
+            </div>
+          </div>
+
+          {/* Academic Performance (Optional) */}
+          <div className="rounded-lg border border-border bg-bg-section p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-xs font-medium text-text-main block">
+                  Self-Reported Academic Performance (Optional)
+                </span>
+                <span className="text-[11px] text-text-muted">
+                  Optional self-reported metric. Missing marks are never penalized and mismatched scales are never compared.
+                </span>
+              </div>
+              {performanceScale && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPerformanceScale('');
+                    setPerformanceScore('');
+                  }}
+                  className="text-[11px] text-text-amber hover:underline"
+                >
+                  Clear Metric
+                </button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div className="space-y-1">
+                <label htmlFor="perf-scale" className="text-[11px] font-medium text-text-muted">Grading Scale</label>
+                <select
+                  id="perf-scale"
+                  value={performanceScale}
+                  onChange={(e) => setPerformanceScale(e.target.value)}
+                  className="w-full text-xs rounded-md border border-border bg-bg-card px-3 py-2 text-text-main"
+                >
+                  {GRADE_SCALE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {performanceScale && (
+                <div className="space-y-1">
+                  <label htmlFor="perf-score" className="text-[11px] font-medium text-text-muted">
+                    {performanceScale === 'percentage'
+                      ? 'Percentage (0 - 100)'
+                      : performanceScale === 'gpa_10'
+                      ? 'GPA (0.0 - 10.0)'
+                      : 'GPA (0.0 - 4.0)'}
+                  </label>
+                  <Input
+                    id="perf-score"
+                    type="number"
+                    step="0.01"
+                    value={performanceScore}
+                    onChange={(e) => setPerformanceScore(e.target.value)}
+                    placeholder={
+                      performanceScale === 'percentage'
+                        ? 'e.g. 88.5'
+                        : performanceScale === 'gpa_10'
+                        ? 'e.g. 9.1'
+                        : 'e.g. 3.75'
+                    }
+                    className="text-xs"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Learning Style Preference */}
+          <div className="space-y-3 pt-2">
+            <div>
+              <label className="text-xs font-medium text-text-main block">
+                Preferred Learning & Collaboration Style (Required for Compatibility)
+              </label>
+              <p className="text-[11px] text-text-muted">
+                Used to pair you with classmates and project teams who share or complement your working approach.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              {LEARNING_STYLE_OPTIONS.map((style) => (
+                <div
+                  key={style.value}
+                  onClick={() => setLearningStyle(style.value)}
+                  className={`rounded-lg border p-3 cursor-pointer transition-all ${
+                    learningStyle === style.value
+                      ? 'border-primary bg-primary/5 text-text-main ring-1 ring-primary'
+                      : 'border-border bg-bg-card text-text-muted hover:border-text-muted'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-text-main">{style.label}</span>
+                    {learningStyle === style.value && (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+                    )}
+                  </div>
+                  <p className="text-[11px] text-text-muted mt-1 leading-snug">{style.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </Card>
+
+        {/* SECTION 2: TECHNICAL SKILLS & TIME SLOTS */}
         <Card className="p-6 space-y-6">
           <div className="border-b border-border pb-4">
             <div className="flex items-center gap-2 text-text-main">
               <User className="w-4 h-4 text-text-amber" />
-              <h2 className="font-serif text-lg font-medium">1. General Profile & Project Collaboration</h2>
+              <h2 className="font-serif text-lg font-medium">2. Technical Skills & Availability</h2>
             </div>
             <p className="text-xs text-text-muted mt-1">
-              General bio, technical competencies, schedule availability, and project goals.
+              Your core technical capabilities and weekly schedule windows.
             </p>
           </div>
 
           {/* Bio */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <label htmlFor="bio-input" className="block text-xs font-medium text-text-main tracking-wide">
-                Student Bio
-              </label>
-              <span className={`text-[10px] ${bio.length > 500 ? 'text-text-amber font-semibold' : 'text-text-muted'}`}>
-                {bio.length}/500
-              </span>
+              <label htmlFor="bio" className="text-xs font-medium text-text-main">Short Academic Bio</label>
+              <span className="text-[11px] text-text-muted">{bio.length}/500</span>
             </div>
             <textarea
-              id="bio-input"
+              id="bio"
               rows={3}
               value={bio}
               onChange={(e) => setBio(e.target.value)}
-              maxLength={500}
-              placeholder="e.g., Computer science junior focusing on web application architecture, databases, and UI development."
-              className="w-full rounded-md border border-border bg-bg-card px-3.5 py-2 text-sm text-text-main placeholder:text-text-muted transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              placeholder="Tell collaborators about your technical passions, active research, or semester objectives..."
+              className="w-full text-xs rounded-md border border-border bg-bg-card p-3 text-text-main focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
 
-          {/* Offered Skills List */}
+          {/* Declared Skills */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <label className="block text-xs font-medium text-text-main tracking-wide">
-                  Skills & Proficiency Levels (1-5)
-                </label>
-                <p className="text-[11px] text-text-muted">
-                  Used for Project matching (40% weight) and offered skills in SkillSwap.
-                </p>
+                <span className="text-xs font-medium text-text-main block">Offered Skills & Proficiency</span>
+                <span className="text-[11px] text-text-muted">
+                  Used for Project matching (30%) and SkillSwap teaching coverage (40%).
+                </span>
               </div>
-              <Button type="button" variant="secondary" size="sm" onClick={handleAddSkill} className="flex items-center gap-1">
-                <Plus className="w-3.5 h-3.5" />
-                <span>Add Skill</span>
+              <Button type="button" onClick={handleAddSkill} size="sm" variant="outline">
+                <Plus className="w-3.5 h-3.5 mr-1" /> Add Skill
               </Button>
             </div>
 
-            {skills.length === 0 ? (
-              <div className="rounded-md border border-dashed border-border p-4 text-center text-xs text-text-muted">
-                No skills added yet. Click &quot;Add Skill&quot; to declare your competencies.
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {skills.map((s, index) => (
-                  <div key={index} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 rounded-md border border-border bg-bg-section/50 p-2.5">
-                    <div className="flex-1">
-                      <input
-                        type="text"
-                        value={s.name}
-                        onChange={(e) => handleUpdateSkill(index, 'name', e.target.value)}
-                        placeholder="e.g., React, Node.js, Python, Figma"
-                        className="w-full rounded-md border border-border bg-bg-card px-3 py-1.5 text-xs text-text-main placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary"
-                      />
-                    </div>
-                    <div className="w-full sm:w-48">
-                      <select
-                        value={s.level}
-                        onChange={(e) => handleUpdateSkill(index, 'level', e.target.value)}
-                        className="w-full rounded-md border border-border bg-bg-card px-3 py-1.5 text-xs text-text-main focus:outline-none focus:ring-1 focus:ring-primary"
-                      >
-                        {[1, 2, 3, 4, 5].map((lvl) => (
-                          <option key={lvl} value={lvl}>
-                            {PROFICIENCY_LABELS[lvl]}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveSkill(index)}
-                      className="p-1.5 rounded text-text-muted hover:text-text-amber hover:bg-bg-section transition-colors self-end sm:self-center"
-                      title="Remove skill"
-                      aria-label={`Remove skill ${s.name || index + 1}`}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+            <div className="space-y-2">
+              {skills.map((skill, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <Input
+                    value={skill.name}
+                    onChange={(e) => handleUpdateSkill(index, 'name', e.target.value)}
+                    placeholder="Skill name (e.g. Python, React, PyTorch)"
+                    className="text-xs flex-1"
+                  />
+                  <select
+                    value={skill.level}
+                    onChange={(e) => handleUpdateSkill(index, 'level', e.target.value)}
+                    className="text-xs rounded-md border border-border bg-bg-card px-3 py-2 text-text-main w-44"
+                  >
+                    {[1, 2, 3, 4, 5].map((lvl) => (
+                      <option key={lvl} value={lvl}>
+                        {PROFICIENCY_LABELS[lvl]}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveSkill(index)}
+                    className="p-2 text-text-muted hover:text-red-500 rounded"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+              {skills.length === 0 && (
+                <p className="text-xs text-text-muted italic py-2">
+                  No skills declared. Click "Add Skill" to declare your strengths.
+                </p>
+              )}
+            </div>
           </div>
 
-          {/* Time Slots Toggle Matrix */}
+          {/* Time Slots */}
           <div className="space-y-2">
             <div>
-              <label className="block text-xs font-medium text-text-main tracking-wide">
-                Available Time Slots
-              </label>
-              <p className="text-[11px] text-text-muted">
-                Select your general weekly availability windows ({timeSlots.length} active).
-              </p>
+              <span className="text-xs font-medium text-text-main block">Weekly Availability Windows</span>
+              <span className="text-[11px] text-text-muted">
+                Select recurring times when you are free for live sprint syncs or study sessions.
+              </span>
             </div>
-            <div className="flex flex-wrap gap-1.5 pt-1">
+            <div className="grid grid-cols-3 sm:grid-cols-7 gap-1.5 pt-1">
               {COMMON_TIME_SLOTS.map((slot) => {
-                const active = timeSlots.includes(slot);
-                const readable = slot.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+                const isSelected = timeSlots.includes(slot);
+                const parts = slot.split('_');
+                const day = parts[0].toUpperCase();
+                const period = parts[1];
                 return (
                   <button
                     key={slot}
                     type="button"
                     onClick={() => handleToggleTimeSlot(slot)}
-                    className={`px-2.5 py-1 rounded text-[11px] font-sans border transition-colors cursor-pointer ${
-                      active
-                        ? 'border-primary bg-primary text-primary-foreground font-medium'
-                        : 'border-border bg-bg-card text-text-muted hover:text-text-main hover:bg-bg-section'
+                    className={`py-1.5 px-2 rounded text-[11px] font-medium border text-center transition-colors ${
+                      isSelected
+                        ? 'border-primary bg-primary text-white'
+                        : 'border-border bg-bg-card text-text-muted hover:border-text-muted'
                     }`}
                   >
-                    {readable}
+                    <div>{day}</div>
+                    <div className="text-[9px] opacity-80 capitalize">{period}</div>
                   </button>
                 );
               })}
             </div>
           </div>
 
-          {/* Goals Tag Manager */}
-          <div className="space-y-2">
-            <label className="block text-xs font-medium text-text-main tracking-wide">
-              Project Goals
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={goalInput}
-                onChange={(e) => setGoalInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleAddTag('goal');
-                  }
-                }}
-                placeholder="Type a goal (e.g., portfolio, hackathon, capstone) and press Enter"
-                className="flex-1 rounded-md border border-border bg-bg-card px-3 py-1.5 text-xs text-text-main placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-              <Button type="button" variant="secondary" size="sm" onClick={() => handleAddTag('goal')}>
-                Add
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-1.5 pt-1">
-              {goals.map((g) => (
-                <span
-                  key={g}
-                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-xs bg-bg-section border border-border text-text-main"
-                >
-                  <span>{g}</span>
-                  <button
-                    type="button"
-                    onClick={() => setGoals((prev) => prev.filter((item) => item !== g))}
-                    className="text-text-muted hover:text-text-amber"
-                    aria-label={`Remove goal ${g}`}
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {/* Timeline and Working Style Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-            {/* Preferred Timeline */}
+          {/* Goals and Timeline */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
             <div className="space-y-1.5">
-              <label htmlFor="timeline-select" className="block text-xs font-medium text-text-main tracking-wide">
-                Preferred Project Timeline
-              </label>
+              <label htmlFor="timeline" className="text-xs font-medium text-text-main">Target Timeline</label>
               <select
-                id="timeline-select"
+                id="timeline"
                 value={timeline}
                 onChange={(e) => setTimeline(e.target.value)}
-                className="w-full rounded-md border border-border bg-bg-card px-3 py-2 text-xs text-text-main focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full text-xs rounded-md border border-border bg-bg-card px-3 py-2 text-text-main"
               >
                 {TIMELINE_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -633,247 +970,436 @@ export function ProfilePage() {
               </select>
             </div>
 
-            {/* Working Style */}
             <div className="space-y-1.5">
-              <label htmlFor="working-style-select" className="block text-xs font-medium text-text-main tracking-wide">
-                Preferred Working Style
-              </label>
+              <label htmlFor="workingStyle" className="text-xs font-medium text-text-main">Working Style</label>
               <select
-                id="working-style-select"
+                id="workingStyle"
                 value={workingStyle}
                 onChange={(e) => setWorkingStyle(e.target.value)}
-                className="w-full rounded-md border border-border bg-bg-card px-3 py-2 text-xs text-text-main focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full text-xs rounded-md border border-border bg-bg-card px-3 py-2 text-text-main"
               >
                 {WORKING_STYLE_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
-                    {opt.label} — {opt.desc}
+                    {opt.label}
                   </option>
                 ))}
               </select>
             </div>
           </div>
+
+          {/* Goals Tags */}
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-text-main">Project & Collaboration Goals</label>
+            <div className="flex gap-2">
+              <Input
+                value={goalInput}
+                onChange={(e) => setGoalInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag('goal'))}
+                placeholder="e.g. portfolio, capstone, hackathon, publication"
+                className="text-xs"
+              />
+              <Button type="button" onClick={() => handleAddTag('goal')} size="sm" variant="outline">
+                <Plus className="w-3.5 h-3.5 mr-1" /> Add Goal
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {goals.map((g, i) => (
+                <Badge
+                  key={i}
+                  variant="secondary"
+                  className="text-xs flex items-center gap-1 cursor-pointer"
+                  onClick={() => setGoals((prev) => prev.filter((_, idx) => idx !== i))}
+                >
+                  <span>{g.replace(/_/g, ' ')}</span>
+                  <X className="w-3 h-3 hover:text-red-500" />
+                </Badge>
+              ))}
+            </div>
+          </div>
         </Card>
 
-        {/* SECTION 2: STUDY BUDDY PREFERENCES */}
+        {/* SECTION 3: STUDY SQUAD & EXAM PREP PREFERENCES */}
         <Card className="p-6 space-y-6">
           <div className="border-b border-border pb-4">
             <div className="flex items-center gap-2 text-text-main">
               <BookOpen className="w-4 h-4 text-text-amber" />
-              <h2 className="font-serif text-lg font-medium">2. Course Study Squad Preferences</h2>
+              <h2 className="font-serif text-lg font-medium">3. Course Study Squad Preferences</h2>
             </div>
             <p className="text-xs text-text-muted mt-1">
-              Active academic course code, study topics, and preferred learning formats.
+              Course enrollments and active homework/exam topics for study circles.
             </p>
           </div>
 
-          {/* Course Code */}
-          <div className="space-y-1.5 max-w-sm">
+          <div className="space-y-1.5">
+            <label htmlFor="courseCode" className="text-xs font-medium text-text-main">Primary Enrolled Course Code</label>
             <Input
-              id="course-code"
-              label="Primary Course Code"
+              id="courseCode"
               value={courseCode}
               onChange={(e) => setCourseCode(e.target.value)}
-              placeholder="e.g., CS101, MATH240, PHYS201"
-              maxLength={30}
-              hint="Exact course match accounts for 70% of study alignment factor."
+              placeholder="e.g. CS101, EECS-280, MATH-214"
+              className="text-xs"
             />
           </div>
 
-          {/* Topics Tag Manager */}
+          {/* Topics */}
           <div className="space-y-2">
-            <label className="block text-xs font-medium text-text-main tracking-wide">
-              Active Course Topics
-            </label>
-            <p className="text-[11px] text-text-muted">
-              Topics are compared using Jaccard similarity to calculate content overlap.
-            </p>
+            <label className="text-xs font-medium text-text-main">Active Study Topics</label>
             <div className="flex gap-2">
-              <input
-                type="text"
+              <Input
                 value={topicInput}
                 onChange={(e) => setTopicInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleAddTag('topic');
-                  }
-                }}
-                placeholder="e.g., algorithms, dynamic_programming, binary_trees"
-                className="flex-1 rounded-md border border-border bg-bg-card px-3 py-1.5 text-xs text-text-main placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary"
+                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag('topic'))}
+                placeholder="e.g. binary_trees, dynamic_programming, sql_indexing"
+                className="text-xs"
               />
-              <Button type="button" variant="secondary" size="sm" onClick={() => handleAddTag('topic')}>
-                Add Topic
+              <Button type="button" onClick={() => handleAddTag('topic')} size="sm" variant="outline">
+                <Plus className="w-3.5 h-3.5 mr-1" /> Add Topic
               </Button>
             </div>
             <div className="flex flex-wrap gap-1.5 pt-1">
-              {topics.map((t) => (
-                <span
-                  key={t}
-                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-xs bg-bg-section border border-border text-text-main"
+              {topics.map((t, i) => (
+                <Badge
+                  key={i}
+                  variant="secondary"
+                  className="text-xs flex items-center gap-1 cursor-pointer"
+                  onClick={() => setTopics((prev) => prev.filter((_, idx) => idx !== i))}
                 >
-                  <span>{t}</span>
-                  <button
-                    type="button"
-                    onClick={() => setTopics((prev) => prev.filter((item) => item !== t))}
-                    className="text-text-muted hover:text-text-amber"
-                    aria-label={`Remove topic ${t}`}
-                  >
-                    ×
-                  </button>
-                </span>
+                  <span>{t.replace(/_/g, ' ')}</span>
+                  <X className="w-3 h-3 hover:text-red-500" />
+                </Badge>
               ))}
             </div>
           </div>
 
-          {/* Learning Preferences Tag Manager */}
+          {/* Learning Preferences */}
           <div className="space-y-2">
-            <label className="block text-xs font-medium text-text-main tracking-wide">
-              Learning Preferences
-            </label>
+            <label className="text-xs font-medium text-text-main">Study Method Preferences</label>
             <div className="flex gap-2">
-              <input
-                type="text"
+              <Input
                 value={prefInput}
                 onChange={(e) => setPrefInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleAddTag('pref');
-                  }
-                }}
-                placeholder="e.g., problem_solving, discussion, exam_review"
-                className="flex-1 rounded-md border border-border bg-bg-card px-3 py-1.5 text-xs text-text-main placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary"
+                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag('pref'))}
+                placeholder="e.g. problem_solving, whiteboard_sessions, mock_quizzes"
+                className="text-xs"
               />
-              <Button type="button" variant="secondary" size="sm" onClick={() => handleAddTag('pref')}>
-                Add Preference
+              <Button type="button" onClick={() => handleAddTag('pref')} size="sm" variant="outline">
+                <Plus className="w-3.5 h-3.5 mr-1" /> Add Method
               </Button>
             </div>
             <div className="flex flex-wrap gap-1.5 pt-1">
-              {learningPreferences.map((p) => (
-                <span
-                  key={p}
-                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-xs bg-bg-section border border-border text-text-main"
+              {learningPreferences.map((p, i) => (
+                <Badge
+                  key={i}
+                  variant="secondary"
+                  className="text-xs flex items-center gap-1 cursor-pointer"
+                  onClick={() => setLearningPreferences((prev) => prev.filter((_, idx) => idx !== i))}
                 >
-                  <span>{p}</span>
-                  <button
-                    type="button"
-                    onClick={() => setLearningPreferences((prev) => prev.filter((item) => item !== p))}
-                    className="text-text-muted hover:text-text-amber"
-                    aria-label={`Remove preference ${p}`}
-                  >
-                    ×
-                  </button>
-                </span>
+                  <span>{p.replace(/_/g, ' ')}</span>
+                  <X className="w-3 h-3 hover:text-red-500" />
+                </Badge>
               ))}
             </div>
           </div>
         </Card>
 
-        {/* SECTION 3: SKILLSWAP PREFERENCES */}
+        {/* SECTION 4: SKILLSWAP RECIPROCAL TUTORING */}
         <Card className="p-6 space-y-6">
           <div className="border-b border-border pb-4">
             <div className="flex items-center gap-2 text-text-main">
               <ArrowLeftRight className="w-4 h-4 text-text-amber" />
-              <h2 className="font-serif text-lg font-medium">3. SkillSwap Reciprocal Tutoring</h2>
+              <h2 className="font-serif text-lg font-medium">4. SkillSwap Reciprocal Tutoring</h2>
             </div>
             <p className="text-xs text-text-muted mt-1">
-              Skills you wish to learn and weekly hours available for tutoring exchanges.
+              Skills you wish to learn and weekly hours available for mutual peer exchanges.
             </p>
           </div>
 
-          {/* Desired Skills List */}
+          {/* Desired Skills */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <label className="block text-xs font-medium text-text-main tracking-wide">
-                  Desired Skills & Target Levels (1-5)
-                </label>
-                <p className="text-[11px] text-text-muted">
-                  Skills you want a peer to teach you. Matching requires bidirectional reciprocation.
-                </p>
+                <span className="text-xs font-medium text-text-main block">Skills You Want to Learn</span>
+                <span className="text-[11px] text-text-muted">
+                  SkillSwap strictly requires mutual reciprocation: you teach what your peer wants, and they teach what you want.
+                </span>
               </div>
-              <Button type="button" variant="secondary" size="sm" onClick={handleAddDesiredSkill} className="flex items-center gap-1">
-                <Plus className="w-3.5 h-3.5" />
-                <span>Add Desired Skill</span>
+              <Button type="button" onClick={handleAddDesiredSkill} size="sm" variant="outline">
+                <Plus className="w-3.5 h-3.5 mr-1" /> Add Desired Skill
               </Button>
             </div>
 
-            {desiredSkills.length === 0 ? (
-              <div className="rounded-md border border-dashed border-border p-4 text-center text-xs text-text-muted">
-                No desired skills added yet. Click &quot;Add Desired Skill&quot; to declare what you want to learn.
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {desiredSkills.map((d, index) => (
-                  <div key={index} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 rounded-md border border-border bg-bg-section/50 p-2.5">
-                    <div className="flex-1">
-                      <input
-                        type="text"
-                        value={d.name}
-                        onChange={(e) => handleUpdateDesiredSkill(index, 'name', e.target.value)}
-                        placeholder="e.g., Python, Rust, Docker, Machine Learning"
-                        className="w-full rounded-md border border-border bg-bg-card px-3 py-1.5 text-xs text-text-main placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-primary"
-                      />
-                    </div>
-                    <div className="w-full sm:w-48">
-                      <select
-                        value={d.targetLevel}
-                        onChange={(e) => handleUpdateDesiredSkill(index, 'targetLevel', e.target.value)}
-                        className="w-full rounded-md border border-border bg-bg-card px-3 py-1.5 text-xs text-text-main focus:outline-none focus:ring-1 focus:ring-primary"
-                      >
-                        {[1, 2, 3, 4, 5].map((lvl) => (
-                          <option key={lvl} value={lvl}>
-                            Target: {PROFICIENCY_LABELS[lvl]}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveDesiredSkill(index)}
-                      className="p-1.5 rounded text-text-muted hover:text-text-amber hover:bg-bg-section transition-colors self-end sm:self-center"
-                      title="Remove desired skill"
-                      aria-label={`Remove desired skill ${d.name || index + 1}`}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+            <div className="space-y-2">
+              {desiredSkills.map((desired, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <Input
+                    value={desired.name}
+                    onChange={(e) => handleUpdateDesiredSkill(index, 'name', e.target.value)}
+                    placeholder="Desired skill (e.g. Flutter, Docker, Figma)"
+                    className="text-xs flex-1"
+                  />
+                  <select
+                    value={desired.targetLevel}
+                    onChange={(e) => handleUpdateDesiredSkill(index, 'targetLevel', e.target.value)}
+                    className="text-xs rounded-md border border-border bg-bg-card px-3 py-2 text-text-main w-44"
+                  >
+                    {[1, 2, 3, 4, 5].map((lvl) => (
+                      <option key={lvl} value={lvl}>
+                        Target: {PROFICIENCY_LABELS[lvl]}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveDesiredSkill(index)}
+                    className="p-2 text-text-muted hover:text-red-500 rounded"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+              {desiredSkills.length === 0 && (
+                <p className="text-xs text-text-muted italic py-2">
+                  No desired skills configured yet. Add subjects you want personalized peer tutoring in.
+                </p>
+              )}
+            </div>
           </div>
 
-          {/* Weekly Hours Input */}
-          <div className="space-y-1.5 max-w-sm">
+          <div className="space-y-1.5 max-w-xs">
+            <label htmlFor="weeklyHours" className="text-xs font-medium text-text-main">
+              Weekly Exchange Commitment (Hours/Week)
+            </label>
             <Input
-              id="weekly-hours"
+              id="weeklyHours"
               type="number"
               step="0.5"
               min="0.5"
               max="168"
-              label="Weekly Available Hours"
               value={weeklyHours}
               onChange={(e) => setWeeklyHours(e.target.value)}
-              placeholder="e.g., 5"
-              hint="Committed hours per week for tutoring (0.5 to 168 hours)."
+              className="text-xs"
             />
           </div>
         </Card>
 
+        {/* SECTION 5: PROJECT IDEAS & PREVIOUS EXPERIENCE */}
+        <Card className="p-6 space-y-6">
+          <div className="border-b border-border pb-4">
+            <div className="flex items-center gap-2 text-text-main">
+              <FolderGit2 className="w-4 h-4 text-text-amber" />
+              <h2 className="font-serif text-lg font-medium">5. Project Ideas & Experience</h2>
+            </div>
+            <p className="text-xs text-text-muted mt-1">
+              Past completed projects (15% project experience factor) and ideas you want to build.
+            </p>
+          </div>
+
+          {/* Past Projects */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-xs font-medium text-text-main block">Previous Projects & Experience</span>
+                <span className="text-[11px] text-text-muted">
+                  Used directly in Project Compatibility (15%) to assess practical experience in required technologies.
+                </span>
+              </div>
+              <Button type="button" onClick={handleAddPreviousProject} size="sm" variant="outline">
+                <Plus className="w-3.5 h-3.5 mr-1" /> Add Past Project
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              {previousProjects.map((proj, idx) => (
+                <div key={idx} className="rounded-lg border border-border bg-bg-card p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-text-amber">Project #{idx + 1}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemovePreviousProject(idx)}
+                      className="p-1 text-text-muted hover:text-red-500 rounded"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <Input
+                      value={proj.title}
+                      onChange={(e) => handleUpdatePreviousProject(idx, 'title', e.target.value)}
+                      placeholder="Project title (e.g. Distributed Key-Value Store)"
+                      className="text-xs"
+                    />
+                    <Input
+                      value={proj.role || ''}
+                      onChange={(e) => handleUpdatePreviousProject(idx, 'role', e.target.value)}
+                      placeholder="Your role (e.g. Systems Engineer, Fullstack Lead)"
+                      className="text-xs"
+                    />
+                  </div>
+                  <Input
+                    value={Array.isArray(proj.skills) ? proj.skills.join(', ') : ''}
+                    onChange={(e) =>
+                      handleUpdatePreviousProject(
+                        idx,
+                        'skills',
+                        e.target.value.split(',').map((s) => s.trim()).filter(Boolean)
+                      )
+                    }
+                    placeholder="Technologies used (comma-separated: e.g. Rust, Raft, Docker)"
+                    className="text-xs"
+                  />
+                  <textarea
+                    rows={2}
+                    value={proj.achievements || ''}
+                    onChange={(e) => handleUpdatePreviousProject(idx, 'achievements', e.target.value)}
+                    placeholder="Outcomes, metrics, or achievements (e.g. Handled 5k req/s with 99th percentile < 10ms)..."
+                    className="w-full text-xs rounded-md border border-border bg-bg-card p-2 text-text-main"
+                  />
+                </div>
+              ))}
+              {previousProjects.length === 0 && (
+                <p className="text-xs text-text-muted italic py-1">
+                  No past projects added. Adding past projects demonstrates hands-on experience for team matching.
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Project Ideas */}
+          <div className="space-y-3 pt-4 border-t border-border">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-xs font-medium text-text-main block">Project Ideas & Pitches</span>
+                <span className="text-[11px] text-text-muted">
+                  Proposals and concepts you are looking to recruit classmates or teammates for.
+                </span>
+              </div>
+              <Button type="button" onClick={handleAddProjectIdea} size="sm" variant="outline">
+                <Plus className="w-3.5 h-3.5 mr-1" /> Add Idea
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              {projectIdeas.map((idea, idx) => (
+                <div key={idx} className="rounded-lg border border-border bg-bg-card p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-text-amber">Idea #{idx + 1}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveProjectIdea(idx)}
+                      className="p-1 text-text-muted hover:text-red-500 rounded"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <Input
+                    value={idea.title}
+                    onChange={(e) => handleUpdateProjectIdea(idx, 'title', e.target.value)}
+                    placeholder="Idea title (e.g. Campus Peer Tutoring Micro-App)"
+                    className="text-xs"
+                  />
+                  <textarea
+                    rows={2}
+                    value={idea.description || ''}
+                    onChange={(e) => handleUpdateProjectIdea(idx, 'description', e.target.value)}
+                    placeholder="Short description of the problem and intended tech stack..."
+                    className="w-full text-xs rounded-md border border-border bg-bg-card p-2 text-text-main"
+                  />
+                </div>
+              ))}
+              {projectIdeas.length === 0 && (
+                <p className="text-xs text-text-muted italic py-1">
+                  No project ideas added yet.
+                </p>
+              )}
+            </div>
+          </div>
+        </Card>
+
+        {/* SECTION 6: ACHIEVEMENTS & COLLABORATION PREFERENCES */}
+        <Card className="p-6 space-y-6">
+          <div className="border-b border-border pb-4">
+            <div className="flex items-center gap-2 text-text-main">
+              <Award className="w-4 h-4 text-text-amber" />
+              <h2 className="font-serif text-lg font-medium">6. Achievements & Collaboration Preferences</h2>
+            </div>
+            <p className="text-xs text-text-muted mt-1">
+              Honors, hackathons, certifications, and communication constraints.
+            </p>
+          </div>
+
+          {/* Achievements */}
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-text-main">Achievements & Honors</label>
+            <div className="flex gap-2">
+              <Input
+                value={achievementInput}
+                onChange={(e) => setAchievementInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag('achievement'))}
+                placeholder="e.g. 1st Place Hackathon, Dean's Honor Roll, AWS Certified Developer"
+                className="text-xs"
+              />
+              <Button type="button" onClick={() => handleAddTag('achievement')} size="sm" variant="outline">
+                <Plus className="w-3.5 h-3.5 mr-1" /> Add
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {achievements.map((ach, i) => (
+                <Badge
+                  key={i}
+                  variant="secondary"
+                  className="text-xs flex items-center gap-1 cursor-pointer"
+                  onClick={() => setAchievements((prev) => prev.filter((_, idx) => idx !== i))}
+                >
+                  <span>{ach}</span>
+                  <X className="w-3 h-3 hover:text-red-500" />
+                </Badge>
+              ))}
+            </div>
+          </div>
+
+          {/* Collaboration Preferences */}
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-text-main">Communication & Workflow Preferences</label>
+            <div className="flex gap-2">
+              <Input
+                value={collabInput}
+                onChange={(e) => setCollabInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag('collab'))}
+                placeholder="e.g. Slack-first, Async code reviews, Weekend pairing only, UTC-5"
+                className="text-xs"
+              />
+              <Button type="button" onClick={() => handleAddTag('collab')} size="sm" variant="outline">
+                <Plus className="w-3.5 h-3.5 mr-1" /> Add Preference
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {collaborationPreferences.map((pref, i) => (
+                <Badge
+                  key={i}
+                  variant="secondary"
+                  className="text-xs flex items-center gap-1 cursor-pointer"
+                  onClick={() => setCollaborationPreferences((prev) => prev.filter((_, idx) => idx !== i))}
+                >
+                  <span>{pref}</span>
+                  <X className="w-3 h-3 hover:text-red-500" />
+                </Badge>
+              ))}
+            </div>
+          </div>
+        </Card>
+
         {/* BOTTOM SAVE BAR */}
-        <div className="flex items-center justify-between pt-4 border-t border-border">
-          <p className="text-xs text-text-muted">
-            All updates are saved directly to your authenticated MongoDB profile.
-          </p>
+        <div className="flex items-center justify-between border-t border-border pt-4">
+          <span className="text-xs text-text-muted">
+            All fields are saved securely in MongoDB and evaluated deterministically by the scoring engine.
+          </span>
           <Button type="submit" disabled={saving} className="flex items-center gap-2">
             <Save className="w-4 h-4" />
-            <span>{saving ? 'Saving...' : 'Save Profile'}</span>
+            <span>{saving ? 'Saving Profile...' : 'Save Profile Changes'}</span>
           </Button>
         </div>
       </form>
     </div>
   );
 }
-
 export default ProfilePage;
-

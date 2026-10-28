@@ -3,12 +3,18 @@
  * @module backend/src/models/StudentProfile
  *
  * Implements persistent student profiles for SkillSync.
- * Stores general skills, schedule availability, goals, study preferences,
- * and SkillSwap configurations for compatibility scoring and peer discovery.
+ * Stores technical skills, schedule availability, goals, study preferences,
+ * reciprocal SkillSwap configurations, academic background, learning style,
+ * and project experience for deterministic compatibility scoring.
  */
 
 import mongoose from 'mongoose';
-import { WORKING_STYLES } from '../services/matching/compatibilityEngine.js';
+import {
+  WORKING_STYLES,
+  LEARNING_STYLES,
+  GRADE_SCALES,
+  GRADE_SCALE_BOUNDS,
+} from '../services/matching/compatibilityEngine.js';
 
 /**
  * Subschema for declared student skills.
@@ -64,6 +70,145 @@ const desiredSkillSubschema = new mongoose.Schema(
   { _id: false }
 );
 
+/**
+ * Subschema for academic background.
+ */
+const academicBackgroundSubschema = new mongoose.Schema(
+  {
+    degree: {
+      type: String,
+      trim: true,
+      maxlength: [100, 'Degree cannot exceed 100 characters'],
+      default: undefined,
+    },
+    branch: {
+      type: String,
+      trim: true,
+      maxlength: [100, 'Branch cannot exceed 100 characters'],
+      default: undefined,
+    },
+    yearOfStudy: {
+      type: Number,
+      min: [1, 'Year of study must be at least 1'],
+      max: [8, 'Year of study cannot exceed 8'],
+      validate: {
+        validator: (val) => val === undefined || Number.isInteger(val),
+        message: 'Year of study must be an integer',
+      },
+      default: undefined,
+    },
+    semester: {
+      type: Number,
+      min: [1, 'Semester must be at least 1'],
+      max: [16, 'Semester cannot exceed 16'],
+      validate: {
+        validator: (val) => val === undefined || Number.isInteger(val),
+        message: 'Semester must be an integer',
+      },
+      default: undefined,
+    },
+    relevantSubjects: {
+      type: [String],
+      default: undefined,
+    },
+  },
+  { _id: false }
+);
+
+/**
+ * Subschema for optional self-reported academic performance.
+ * Validates scores strictly against the declared scale.
+ */
+const academicPerformanceSubschema = new mongoose.Schema(
+  {
+    scale: {
+      type: String,
+      trim: true,
+      enum: {
+        values: GRADE_SCALES,
+        message: `scale must be one of: ${GRADE_SCALES.join(', ')}`,
+      },
+      required: [true, 'Scale is required when academic performance is provided'],
+    },
+    score: {
+      type: Number,
+      required: [true, 'Score is required when academic performance is provided'],
+      validate: {
+        validator: function (val) {
+          if (typeof val !== 'number' || !Number.isFinite(val)) return false;
+          const bounds = GRADE_SCALE_BOUNDS[this.scale];
+          if (!bounds) return false;
+          return val >= bounds.min && val <= bounds.max;
+        },
+        message: 'Score is out of bounds for the declared academic scale',
+      },
+    },
+  },
+  { _id: false }
+);
+
+/**
+ * Subschema for student project ideas.
+ */
+const projectIdeaSubschema = new mongoose.Schema(
+  {
+    title: {
+      type: String,
+      required: [true, 'Project idea title is required'],
+      trim: true,
+      minlength: [1, 'Title cannot be empty'],
+      maxlength: [100, 'Title cannot exceed 100 characters'],
+    },
+    description: {
+      type: String,
+      trim: true,
+      maxlength: [1000, 'Description cannot exceed 1000 characters'],
+      default: undefined,
+    },
+    tags: {
+      type: [String],
+      default: undefined,
+    },
+  },
+  { _id: false }
+);
+
+/**
+ * Subschema for previous projects and experience.
+ */
+const previousProjectSubschema = new mongoose.Schema(
+  {
+    title: {
+      type: String,
+      required: [true, 'Previous project title is required'],
+      trim: true,
+      minlength: [1, 'Title cannot be empty'],
+      maxlength: [100, 'Title cannot exceed 100 characters'],
+    },
+    skills: {
+      type: [String],
+      default: undefined,
+    },
+    domain: {
+      type: [String],
+      default: undefined,
+    },
+    role: {
+      type: String,
+      trim: true,
+      maxlength: [100, 'Role cannot exceed 100 characters'],
+      default: undefined,
+    },
+    achievements: {
+      type: String,
+      trim: true,
+      maxlength: [1000, 'Achievements cannot exceed 1000 characters'],
+      default: undefined,
+    },
+  },
+  { _id: false }
+);
+
 const studentProfileSchema = new mongoose.Schema(
   {
     userId: {
@@ -107,6 +252,26 @@ const studentProfileSchema = new mongoose.Schema(
       },
       default: undefined,
     },
+    // Academic background & performance
+    academicBackground: {
+      type: academicBackgroundSubschema,
+      default: undefined,
+    },
+    academicPerformance: {
+      type: academicPerformanceSubschema,
+      default: undefined,
+    },
+    // Learning style
+    learningStyle: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      enum: {
+        values: LEARNING_STYLES,
+        message: `learningStyle must be one of: ${LEARNING_STYLES.join(', ')}`,
+      },
+      default: undefined,
+    },
     // Study-buddy preferences
     courseCode: {
       type: String,
@@ -133,6 +298,23 @@ const studentProfileSchema = new mongoose.Schema(
       max: [168, 'Weekly hours cannot exceed 168'],
       default: undefined,
     },
+    // Project ideas & portfolio
+    projectIdeas: {
+      type: [projectIdeaSubschema],
+      default: undefined,
+    },
+    previousProjects: {
+      type: [previousProjectSubschema],
+      default: undefined,
+    },
+    achievements: {
+      type: [String],
+      default: undefined,
+    },
+    collaborationPreferences: {
+      type: [String],
+      default: undefined,
+    },
   },
   {
     timestamps: true,
@@ -144,9 +326,9 @@ const studentProfileSchema = new mongoose.Schema(
  * Identifies whether the profile has all required inputs for matching without inventing a score.
  *
  * Mode Requirements:
- * - Project: skills, timeSlots, goals, timeline, workingStyle
- * - Study: courseCode, topics, timeSlots, learningPreferences
- * - SkillSwap: skills (offered), desiredSkills, timeSlots, weeklyHours
+ * - Project: skills, timeSlots, goals, timeline, workingStyle, learningStyle
+ * - Study: courseCode, topics, timeSlots, learningPreferences, learningStyle
+ * - SkillSwap: skills (offered), desiredSkills, timeSlots, weeklyHours, learningStyle
  *
  * @param {Object} profile - Profile document or plain object
  * @returns {Object} Mode completeness breakdown
@@ -168,6 +350,12 @@ export function calculateProfileCompleteness(profile) {
   ) {
     projectMissing.push('workingStyle');
   }
+  if (
+    typeof p.learningStyle !== 'string' ||
+    !LEARNING_STYLES.includes(p.learningStyle.trim().toLowerCase())
+  ) {
+    projectMissing.push('learningStyle');
+  }
 
   // 2. Study buddy mode
   const studyMissing = [];
@@ -177,6 +365,12 @@ export function calculateProfileCompleteness(profile) {
   if (!Array.isArray(p.topics)) studyMissing.push('topics');
   if (!Array.isArray(p.timeSlots)) studyMissing.push('timeSlots');
   if (!Array.isArray(p.learningPreferences)) studyMissing.push('learningPreferences');
+  if (
+    typeof p.learningStyle !== 'string' ||
+    !LEARNING_STYLES.includes(p.learningStyle.trim().toLowerCase())
+  ) {
+    studyMissing.push('learningStyle');
+  }
 
   // 3. SkillSwap mode
   const skillswapMissing = [];
@@ -189,6 +383,12 @@ export function calculateProfileCompleteness(profile) {
     p.weeklyHours <= 0
   ) {
     skillswapMissing.push('weeklyHours');
+  }
+  if (
+    typeof p.learningStyle !== 'string' ||
+    !LEARNING_STYLES.includes(p.learningStyle.trim().toLowerCase())
+  ) {
+    skillswapMissing.push('learningStyle');
   }
 
   return {
@@ -226,6 +426,31 @@ studentProfileSchema.methods.toProjectMatchingPayload = function () {
     goals: this.goals,
     timeline: this.timeline,
     workingStyle: this.workingStyle,
+    learningStyle: this.learningStyle,
+    academicBackground: this.academicBackground
+      ? {
+          degree: this.academicBackground.degree,
+          branch: this.academicBackground.branch,
+          yearOfStudy: this.academicBackground.yearOfStudy,
+          semester: this.academicBackground.semester,
+          relevantSubjects: this.academicBackground.relevantSubjects,
+        }
+      : undefined,
+    academicPerformance: this.academicPerformance
+      ? {
+          scale: this.academicPerformance.scale,
+          score: this.academicPerformance.score,
+        }
+      : undefined,
+    previousProjects: Array.isArray(this.previousProjects)
+      ? this.previousProjects.map((p) => ({
+          title: p.title,
+          skills: p.skills,
+          domain: p.domain,
+          role: p.role,
+          achievements: p.achievements,
+        }))
+      : undefined,
   };
 };
 
@@ -238,6 +463,23 @@ studentProfileSchema.methods.toStudyMatchingPayload = function () {
     topics: this.topics,
     timeSlots: this.timeSlots,
     learningPreferences: this.learningPreferences,
+    learningStyle: this.learningStyle,
+    academicBackground: this.academicBackground
+      ? {
+          degree: this.academicBackground.degree,
+          branch: this.academicBackground.branch,
+          yearOfStudy: this.academicBackground.yearOfStudy,
+          semester: this.academicBackground.semester,
+          relevantSubjects: this.academicBackground.relevantSubjects,
+        }
+      : undefined,
+    academicPerformance: this.academicPerformance
+      ? {
+          scale: this.academicPerformance.scale,
+          score: this.academicPerformance.score,
+        }
+      : undefined,
+    goals: this.goals,
   };
 };
 
@@ -255,6 +497,8 @@ studentProfileSchema.methods.toSkillSwapMatchingPayload = function () {
       : undefined,
     timeSlots: this.timeSlots,
     weeklyHours: this.weeklyHours,
+    learningStyle: this.learningStyle,
+    goals: this.goals,
   };
 };
 
@@ -276,6 +520,14 @@ studentProfileSchema.methods.toSafeObject = function () {
     learningPreferences: this.learningPreferences,
     desiredSkills: this.desiredSkills,
     weeklyHours: this.weeklyHours,
+    // Phase 5D extended fields
+    academicBackground: this.academicBackground,
+    academicPerformance: this.academicPerformance,
+    learningStyle: this.learningStyle,
+    projectIdeas: this.projectIdeas,
+    previousProjects: this.previousProjects,
+    achievements: this.achievements,
+    collaborationPreferences: this.collaborationPreferences,
     createdAt: this.createdAt,
     updatedAt: this.updatedAt,
   };

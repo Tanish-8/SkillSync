@@ -3,9 +3,9 @@
  * @module backend/src/services/matching/compatibilityEngine
  *
  * Implements pure-JavaScript compatibility scoring and reason generation for:
- * 1. Project Compatibility (Weights: Skills 40%, Schedule 25%, Goals/Urgency 20%, Working Style 15%)
- * 2. Study Compatibility (Weights: Course/Subject 40%, Shared Availability 35%, Learning Preferences 25%)
- * 3. SkillSwap Compatibility (Weights: Reciprocal Skills 60%, Skill Depth 20%, Availability/Cadence 20%)
+ * 1. Project Compatibility (Weights: Skills 30%, Goals 20%, Experience 15%, Academic Relevance 15%, Availability 10%, Learning Style 10%)
+ * 2. Study Buddy Compatibility (Weights: Subject/Course 30%, Learning Style 25%, Schedule 20%, Academic Level 15%, Goals 10%)
+ * 3. SkillSwap Compatibility (Weights: Reciprocal Teach/Want 40%, Skill Level 20%, Goals 15%, Availability 15%, Learning Style 10%)
  *
  * Strict Principles:
  * - Deterministic, pure functions (no side effects, no random values, no LLMs, no network or DB calls).
@@ -25,23 +25,57 @@
 
 export const WORKING_STYLES = Object.freeze(['synchronous', 'asynchronous', 'mixed']);
 
+export const LEARNING_STYLES = Object.freeze([
+  'visual',
+  'reading',
+  'hands_on',
+  'discussion',
+  'mixed',
+]);
+
+export const GRADE_SCALES = Object.freeze(['percentage', 'gpa_10', 'gpa_4']);
+
+export const GRADE_SCALE_BOUNDS = Object.freeze({
+  percentage: { min: 0, max: 100 },
+  gpa_10: { min: 0, max: 10 },
+  gpa_4: { min: 0, max: 4 },
+});
+
 export const PROJECT_FACTOR_WEIGHTS = Object.freeze({
-  SKILLS_ALIGNMENT: 40,
-  SCHEDULE_OVERLAP: 25,
+  SKILLS_ALIGNMENT: 30,
+  GOALS_ALIGNMENT: 20,
+  PROJECT_EXPERIENCE: 15,
+  ACADEMIC_RELEVANCE: 15,
+  AVAILABILITY: 10,
+  LEARNING_STYLE: 10,
+  // Backward compatibility alias keys
+  SCHEDULE_OVERLAP: 10,
   GOALS_URGENCY: 20,
-  WORKING_STYLE: 15,
+  WORKING_STYLE: 10,
 });
 
 export const STUDY_FACTOR_WEIGHTS = Object.freeze({
-  COURSE_SUBJECT_OVERLAP: 40,
-  SHARED_AVAILABILITY: 35,
+  SUBJECT_COURSE_OVERLAP: 30,
+  LEARNING_STYLE: 25,
+  SHARED_SCHEDULE: 20,
+  ACADEMIC_LEVEL: 15,
+  GOALS_ALIGNMENT: 10,
+  // Backward compatibility alias keys
+  COURSE_SUBJECT_OVERLAP: 30,
+  SHARED_AVAILABILITY: 20,
   LEARNING_PREFERENCES: 25,
 });
 
 export const SKILLSWAP_FACTOR_WEIGHTS = Object.freeze({
-  RECIPROCAL_SKILLS: 60,
+  RECIPROCAL_TEACH_WANT: 40,
+  SKILL_LEVEL: 20,
+  GOALS_ALIGNMENT: 15,
+  AVAILABILITY: 15,
+  LEARNING_STYLE: 10,
+  // Backward compatibility alias keys
+  RECIPROCAL_SKILLS: 40,
   SKILL_DEPTH: 20,
-  AVAILABILITY_CADENCE: 20,
+  AVAILABILITY_CADENCE: 15,
 });
 
 const HUMAN_TIME_SLOT_LABELS = Object.freeze({
@@ -143,6 +177,55 @@ export function jaccardSimilarity(arrayA, arrayB) {
 export function clampScore(score) {
   if (typeof score !== 'number' || Number.isNaN(score)) return 0;
   return Math.max(0, Math.min(100, Math.round(score)));
+}
+
+// ============================================================================
+// ACADEMIC PERFORMANCE HELPERS
+// ============================================================================
+
+/**
+ * Validates self-reported academic performance against its declared scale.
+ * Academic performance is strictly optional: null or undefined returns true.
+ * @param {*} perf
+ * @returns {boolean}
+ */
+export function isValidAcademicPerformance(perf) {
+  if (perf === null || perf === undefined) return true;
+  if (typeof perf !== 'object' || Array.isArray(perf)) return false;
+  if (!perf.scale || !GRADE_SCALES.includes(perf.scale)) return false;
+  const val = perf.score ?? perf.gpa ?? perf.marks;
+  if (typeof val !== 'number' || !Number.isFinite(val)) return false;
+  const bounds = GRADE_SCALE_BOUNDS[perf.scale];
+  return val >= bounds.min && val <= bounds.max;
+}
+
+/**
+ * Compares two academic performance objects safely.
+ * Never silently converts or compares incompatible scales.
+ * @param {*} perfA
+ * @param {*} perfB
+ * @returns {{ comparable: boolean, reason?: string, diff?: number }}
+ */
+export function compareAcademicPerformance(perfA, perfB) {
+  if (!perfA || !perfB) {
+    return { comparable: false, reason: 'optional_missing' };
+  }
+  if (!perfA.scale || !perfB.scale) {
+    return { comparable: false, reason: 'scale_missing' };
+  }
+  if (perfA.scale !== perfB.scale) {
+    return { comparable: false, reason: 'incompatible_scales' };
+  }
+  const valA = perfA.score ?? perfA.gpa ?? perfA.marks;
+  const valB = perfB.score ?? perfB.gpa ?? perfB.marks;
+  if (typeof valA !== 'number' || typeof valB !== 'number') {
+    return { comparable: false, reason: 'invalid_values' };
+  }
+  return {
+    comparable: true,
+    scale: perfA.scale,
+    diff: Math.abs(valA - valB),
+  };
 }
 
 // ============================================================================
@@ -277,8 +360,17 @@ function isValidWorkingStyle(style) {
   return typeof style === 'string' && WORKING_STYLES.includes(normalizeString(style));
 }
 
+/**
+ * Checks if learning style is one of the recognized LEARNING_STYLES.
+ * @param {*} style
+ * @returns {boolean}
+ */
+function isValidLearningStyle(style) {
+  return typeof style === 'string' && LEARNING_STYLES.includes(normalizeString(style));
+}
+
 // ============================================================================
-// 1. PROJECT COMPATIBILITY ENGINE
+// 1. PROJECT COMPATIBILITY ENGINE (6 Factors, 100%)
 // ============================================================================
 
 /**
@@ -321,11 +413,6 @@ function validateProjectInput(project, student) {
     errors.push('project.timeline must be a non-empty string.');
   }
 
-  // Project working style
-  if (!isValidWorkingStyle(project.workingStyle)) {
-    errors.push(`project.workingStyle must be one of: ${WORKING_STYLES.join(', ')}.`);
-  }
-
   // Student skills
   if (!Array.isArray(student.skills)) {
     errors.push('student.skills must be an array.');
@@ -348,40 +435,42 @@ function validateProjectInput(project, student) {
     errors.push('student.timeline must be a non-empty string.');
   }
 
-  // Student working style
-  if (!isValidWorkingStyle(student.workingStyle)) {
-    errors.push(`student.workingStyle must be one of: ${WORKING_STYLES.join(', ')}.`);
+  // Student learning style (optional in legacy payloads, but validated if present)
+  if (student.learningStyle !== undefined && student.learningStyle !== null && !isValidLearningStyle(student.learningStyle)) {
+    errors.push(`student.learningStyle must be one of: ${LEARNING_STYLES.join(', ')}.`);
+  }
+
+  // Academic performance validation if provided
+  if (student.academicPerformance && !isValidAcademicPerformance(student.academicPerformance)) {
+    errors.push('student.academicPerformance is invalid for its declared scale.');
   }
 
   return errors;
 }
 
 /**
- * Calculates Project Compatibility between a project requirement set and a student profile.
+ * Calculates Project Compatibility between a project requirement set and a student candidate profile.
  *
- * Factors & Weights:
- * - Skills Alignment: 40%
- * - Schedule Overlap: 25%
- * - Goal & Urgency Alignment: 20%
- * - Working-Style Compatibility: 15%
+ * Factors & Exact Weights (Sum: 100%):
+ * 1. Skills alignment: 30%
+ * 2. Goals alignment: 20%
+ * 3. Relevant project experience: 15%
+ * 4. Academic relevance: 15%
+ * 5. Availability compatibility: 10%
+ * 6. Learning-style compatibility: 10%
  *
  * Empty Sets Rule:
  * - Empty requiredSkills (`[]`) earns 0 (not 100).
  * - Empty project timeSlots (`[]`) earns 0 (not 100).
  * - Empty goals (`[]`) earns 0 similarity.
+ * - Empty previousProjects (`[]`) earns 0 experience.
+ *
+ * Academic Relevance Rule:
+ * - When project declares no academic restrictions, does not penalize candidate.
+ * - Missing academic performance/marks is never scored as zero.
  *
  * @param {Object} project
- * @param {Array<{ name: string, minLevel: number }>} project.requiredSkills
- * @param {string[]} project.timeSlots
- * @param {string[]} project.goals
- * @param {string} project.timeline
- * @param {string} project.workingStyle
  * @param {Object} student
- * @param {Array<{ name: string, level: number }>} student.skills
- * @param {string[]} student.timeSlots
- * @param {string[]} student.goals
- * @param {string} student.timeline
- * @param {string} student.workingStyle
  * @returns {CompatibilityResult}
  */
 export function calculateProjectCompatibility(project, student) {
@@ -391,7 +480,7 @@ export function calculateProjectCompatibility(project, student) {
   }
 
   // --------------------------------------------------------------------------
-  // 1. Skills Alignment (40%)
+  // 1. Skills Alignment (30%)
   // --------------------------------------------------------------------------
   const studentSkillMap = new Map();
   for (const sk of student.skills) {
@@ -429,30 +518,11 @@ export function calculateProjectCompatibility(project, student) {
     missingSkills.push(...reqSkills.map((r) => r.name));
     skillsScore = 0;
   } else {
-    // reqSkills.length === 0: no requirements declared
     skillsScore = 0;
   }
 
   // --------------------------------------------------------------------------
-  // 2. Schedule Overlap (25%)
-  // --------------------------------------------------------------------------
-  const studentSlots = new Set(student.timeSlots.map(normalizeSlot));
-  const projectSlots = project.timeSlots.map(normalizeSlot);
-
-  let scheduleScore = 0;
-  const coveredSlots = [];
-
-  if (projectSlots.length > 0 && studentSlots.size > 0) {
-    for (const slot of projectSlots) {
-      if (studentSlots.has(slot)) {
-        coveredSlots.push(slot);
-      }
-    }
-    scheduleScore = clampScore((coveredSlots.length / projectSlots.length) * 100);
-  }
-
-  // --------------------------------------------------------------------------
-  // 3. Goal & Urgency Alignment (20%)
+  // 2. Goals Alignment (20%)
   // --------------------------------------------------------------------------
   const goalSimilarity = jaccardSimilarity(project.goals, student.goals);
 
@@ -466,25 +536,147 @@ export function calculateProjectCompatibility(project, student) {
     timelineScore = 75;
   }
 
-  const goalsUrgencyScore = clampScore(0.6 * goalSimilarity + 0.4 * timelineScore);
+  const goalsScore = clampScore(0.6 * goalSimilarity + 0.4 * timelineScore);
 
   // --------------------------------------------------------------------------
-  // 4. Working-Style Compatibility (15%)
+  // 3. Relevant Project Experience (15%)
   // --------------------------------------------------------------------------
-  const pStyle = normalizeString(project.workingStyle);
-  const sStyle = normalizeString(student.workingStyle);
+  let experienceScore = 0;
+  const previousProjects = Array.isArray(student.previousProjects) ? student.previousProjects : [];
+  const matchedExpSkills = [];
 
-  let styleScore = 35;
-  if (pStyle === sStyle) {
-    styleScore = 100;
-  } else if (pStyle === 'mixed' || sStyle === 'mixed') {
-    styleScore = 75;
+  if (previousProjects.length > 0) {
+    const prevSkillsSet = new Set(
+      previousProjects
+        .flatMap((p) => (Array.isArray(p.skills) ? p.skills : []))
+        .map(normalizeString)
+        .filter(Boolean)
+    );
+    const prevDomainsSet = new Set(
+      previousProjects
+        .flatMap((p) => {
+          if (Array.isArray(p.domain)) return p.domain;
+          if (typeof p.domain === 'string') return [p.domain];
+          return [];
+        })
+        .map(normalizeString)
+        .filter(Boolean)
+    );
+
+    for (const req of reqSkills) {
+      if (prevSkillsSet.has(normalizeString(req.name))) {
+        matchedExpSkills.push(req.name);
+      }
+    }
+
+    const domainMatches = (project.goals || []).filter((g) =>
+      prevDomainsSet.has(normalizeString(g))
+    );
+
+    if (reqSkills.length > 0) {
+      const skillExpRatio = (matchedExpSkills.length / reqSkills.length) * 100;
+      if (matchedExpSkills.length === reqSkills.length) {
+        experienceScore = 100;
+      } else if (matchedExpSkills.length > 0) {
+        experienceScore = clampScore(0.7 * skillExpRatio + (domainMatches.length > 0 ? 30 : 20));
+      } else if (domainMatches.length > 0) {
+        experienceScore = 50;
+      } else {
+        experienceScore = 35;
+      }
+    } else {
+      experienceScore = 50;
+    }
+  } else {
+    // Explicit empty or undeclared past projects
+    experienceScore = 0;
   }
 
-  const workingStyleScore = clampScore(styleScore);
+  // --------------------------------------------------------------------------
+  // 4. Academic Relevance (15%)
+  // --------------------------------------------------------------------------
+  let academicScore = 0;
+  let academicExplanation = '';
+  const acadBg = student.academicBackground;
+  const projectSubjects = Array.isArray(project.relevantSubjects) ? project.relevantSubjects : [];
+
+  if (projectSubjects.length > 0) {
+    const studentSubjects = Array.isArray(acadBg?.relevantSubjects) ? acadBg.relevantSubjects : [];
+    const subjSim = jaccardSimilarity(projectSubjects, studentSubjects);
+    academicScore = clampScore(subjSim);
+    academicExplanation =
+      subjSim > 0
+        ? `Academic coursework aligns with project focus (${Math.round(subjSim)}% subject match).`
+        : 'Candidate subjects do not match project required subjects.';
+  } else {
+    // Project has no specific subject restrictions: evaluate declared academic background without penalizing
+    if (acadBg && (acadBg.degree || acadBg.branch || (acadBg.relevantSubjects && acadBg.relevantSubjects.length > 0))) {
+      const studentSubjects = (acadBg.relevantSubjects || []).map(normalizeString);
+      const directMatch = reqSkills.some((req) => studentSubjects.includes(normalizeString(req.name)));
+      if (directMatch) {
+        academicScore = 100;
+        academicExplanation = `Candidate coursework (${acadBg.relevantSubjects.join(', ')}) directly backs project technical requirements.`;
+      } else {
+        academicScore = 80;
+        academicExplanation = `Project declares no restrictive academic prerequisites; candidate's background (${[acadBg.degree, acadBg.branch].filter(Boolean).join(' - ') || 'declared'}) is compatible.`;
+      }
+    } else {
+      // Neither project nor candidate declared specific academic filters: neutral baseline
+      academicScore = 70;
+      academicExplanation = 'Project has no restrictive academic prerequisites (neutral fit).';
+    }
+  }
 
   // --------------------------------------------------------------------------
-  // Factors Assembly (Weights sum to 100%)
+  // 5. Availability Compatibility (10%)
+  // --------------------------------------------------------------------------
+  const studentSlots = new Set(student.timeSlots.map(normalizeSlot));
+  const projectSlots = project.timeSlots.map(normalizeSlot);
+
+  let availabilityScore = 0;
+  const coveredSlots = [];
+
+  if (projectSlots.length > 0 && studentSlots.size > 0) {
+    for (const slot of projectSlots) {
+      if (studentSlots.has(slot)) {
+        coveredSlots.push(slot);
+      }
+    }
+    availabilityScore = clampScore((coveredSlots.length / projectSlots.length) * 100);
+  }
+
+  // --------------------------------------------------------------------------
+  // 6. Learning-Style Compatibility (10%)
+  // --------------------------------------------------------------------------
+  // Must use candidate's learning-style data, not project's working-style
+  const sLearning = normalizeString(student.learningStyle);
+  const pLearning = normalizeString(project.learningStyle || project.preferredLearningStyle);
+
+  let learningScore = 75;
+  let learningExplanation = '';
+
+  if (pLearning && sLearning) {
+    if (pLearning === sLearning) {
+      learningScore = 100;
+      learningExplanation = `Both project team and candidate align on a ${sLearning.replace(/_/g, ' ')} collaboration approach.`;
+    } else if (pLearning === 'mixed' || sLearning === 'mixed') {
+      learningScore = 75;
+      learningExplanation = `Flexible learning-style match between project (${pLearning.replace(/_/g, ' ')}) and candidate (${sLearning.replace(/_/g, ' ')}).`;
+    } else {
+      learningScore = 40;
+      learningExplanation = `Learning-style divergence: project prefers ${pLearning.replace(/_/g, ' ')} while candidate prefers ${sLearning.replace(/_/g, ' ')}.`;
+    }
+  } else if (sLearning) {
+    learningScore = 100;
+    learningExplanation = `Project accommodates candidate's declared ${sLearning.replace(/_/g, ' ')} learning and collaboration style.`;
+  } else {
+    // Neither declared specific learning style: neutral
+    learningScore = 70;
+    learningExplanation = 'Standard collaboration style fit (no restrictive learning preference specified).';
+  }
+
+  // --------------------------------------------------------------------------
+  // Factors Assembly (Weights sum to exactly 100%)
   // --------------------------------------------------------------------------
   const factors = [
     {
@@ -494,27 +686,39 @@ export function calculateProjectCompatibility(project, student) {
       score: skillsScore,
     },
     {
-      name: 'schedule_overlap',
-      label: 'Schedule Overlap',
-      weight: PROJECT_FACTOR_WEIGHTS.SCHEDULE_OVERLAP,
-      score: scheduleScore,
+      name: 'goals_alignment',
+      label: 'Goals Alignment',
+      weight: PROJECT_FACTOR_WEIGHTS.GOALS_ALIGNMENT,
+      score: goalsScore,
     },
     {
-      name: 'goals_urgency',
-      label: 'Goal & Urgency Alignment',
-      weight: PROJECT_FACTOR_WEIGHTS.GOALS_URGENCY,
-      score: goalsUrgencyScore,
+      name: 'project_experience',
+      label: 'Relevant Project Experience',
+      weight: PROJECT_FACTOR_WEIGHTS.PROJECT_EXPERIENCE,
+      score: experienceScore,
     },
     {
-      name: 'working_style',
-      label: 'Working-Style Compatibility',
-      weight: PROJECT_FACTOR_WEIGHTS.WORKING_STYLE,
-      score: workingStyleScore,
+      name: 'academic_relevance',
+      label: 'Academic Relevance',
+      weight: PROJECT_FACTOR_WEIGHTS.ACADEMIC_RELEVANCE,
+      score: academicScore,
+    },
+    {
+      name: 'availability_compatibility',
+      label: 'Availability Compatibility',
+      weight: PROJECT_FACTOR_WEIGHTS.AVAILABILITY,
+      score: availabilityScore,
+    },
+    {
+      name: 'learning_style_compatibility',
+      label: 'Learning-Style Compatibility',
+      weight: PROJECT_FACTOR_WEIGHTS.LEARNING_STYLE,
+      score: learningScore,
     },
   ];
 
   // --------------------------------------------------------------------------
-  // Explainability Reasons (3-4 input-grounded explanations)
+  // Explainability Reasons
   // --------------------------------------------------------------------------
   const reasons = [];
 
@@ -535,19 +739,7 @@ export function calculateProjectCompatibility(project, student) {
     reasons.push(`You do not currently match any of the project's ${reqSkills.length} required skills (${missingSkills.join(', ')}).`);
   }
 
-  // 2. Schedule Reason
-  if (projectSlots.length === 0) {
-    reasons.push('The project has no declared time slots (0% schedule overlap).');
-  } else if (student.timeSlots.length === 0) {
-    reasons.push('You have not declared any available time slots (0% schedule overlap).');
-  } else if (coveredSlots.length > 0) {
-    const slotNames = coveredSlots.map(formatSlot).join(', ');
-    reasons.push(`You cover ${coveredSlots.length} of ${projectSlots.length} required time slots (${slotNames}).`);
-  } else {
-    reasons.push("You have no overlapping time slots with the project's required schedule.");
-  }
-
-  // 3. Goals & Timeline Reason
+  // 2. Goals & Timeline Reason
   const sharedGoals = project.goals.filter((g) =>
     student.goals.some((sg) => normalizeString(sg) === normalizeString(g))
   );
@@ -569,24 +761,46 @@ export function calculateProjectCompatibility(project, student) {
     reasons.push(timelineText);
   }
 
-  // 4. Working-Style Reason
-  if (pStyle === sStyle) {
-    reasons.push(`Both parties prefer ${project.workingStyle.trim()} collaboration.`);
-  } else if (pStyle === 'mixed' || sStyle === 'mixed') {
-    reasons.push(`Working styles are compatible via flexible mixed collaboration (${project.workingStyle.trim()} and ${student.workingStyle.trim()}).`);
+  // 3. Project Experience Reason
+  if (previousProjects.length === 0) {
+    reasons.push('No previous project experience declared (0% relevant experience).');
+  } else if (matchedExpSkills.length > 0) {
+    reasons.push(`Previous project experience demonstrates practical application of ${matchedExpSkills.join(', ')}.`);
   } else {
-    reasons.push(`Working-style contrast: project is ${project.workingStyle.trim()} while student is ${student.workingStyle.trim()}.`);
+    reasons.push(`Candidate has ${previousProjects.length} previous project(s), but without direct overlap with required skills.`);
+  }
+
+  // 4. Academic Relevance Reason
+  if (academicExplanation) {
+    reasons.push(academicExplanation);
+  }
+
+  // 5. Schedule Reason
+  if (projectSlots.length === 0) {
+    reasons.push('The project has no declared time slots (0% schedule overlap).');
+  } else if (student.timeSlots.length === 0) {
+    reasons.push('You have not declared any available time slots (0% schedule overlap).');
+  } else if (coveredSlots.length > 0) {
+    const slotNames = coveredSlots.map(formatSlot).join(', ');
+    reasons.push(`You cover ${coveredSlots.length} of ${projectSlots.length} required time slots (${slotNames}).`);
+  } else {
+    reasons.push("You have no overlapping time slots with the project's required schedule.");
+  }
+
+  // 6. Learning-Style Reason
+  if (learningExplanation) {
+    reasons.push(learningExplanation);
   }
 
   return calculatedResult(factors, reasons);
 }
 
 // ============================================================================
-// 2. STUDY COMPATIBILITY ENGINE
+// 2. STUDY BUDDY COMPATIBILITY ENGINE (5 Factors, 100%)
 // ============================================================================
 
 /**
- * Validates input structures for Study Compatibility.
+ * Validates input structures for Study Buddy Compatibility.
  * @param {*} studentA
  * @param {*} studentB
  * @returns {string[]} List of validation errors.
@@ -627,40 +841,38 @@ function validateStudyInput(studentA, studentB) {
     errors.push('studentB.timeSlots must be an array of string slot identifiers.');
   }
 
-  // Learning preferences
-  if (!isStringArray(studentA.learningPreferences)) {
-    errors.push('studentA.learningPreferences must be an array of string preference tags.');
+  // Learning style validation if provided
+  if (studentA.learningStyle !== undefined && studentA.learningStyle !== null && !isValidLearningStyle(studentA.learningStyle)) {
+    errors.push(`studentA.learningStyle must be one of: ${LEARNING_STYLES.join(', ')}.`);
   }
-  if (!isStringArray(studentB.learningPreferences)) {
-    errors.push('studentB.learningPreferences must be an array of string preference tags.');
+  if (studentB.learningStyle !== undefined && studentB.learningStyle !== null && !isValidLearningStyle(studentB.learningStyle)) {
+    errors.push(`studentB.learningStyle must be one of: ${LEARNING_STYLES.join(', ')}.`);
   }
 
   return errors;
 }
 
 /**
- * Calculates Study Compatibility between two study partners.
+ * Calculates Study Buddy Compatibility between two study partners.
  *
- * Factors & Weights:
- * - Course & Subject Overlap: 40% (Course code match 70%, Topic tags Jaccard 30%)
- * - Shared Availability: 35% (Time slots Jaccard similarity)
- * - Learning-Preference Alignment: 25% (Learning preference tags Jaccard similarity)
+ * Factors & Exact Weights (Sum: 100%):
+ * 1. Subject/course overlap: 30%
+ * 2. Learning-style compatibility: 25%
+ * 3. Shared schedule: 20%
+ * 4. Academic-level compatibility: 15%
+ * 5. Goals alignment: 10%
  *
  * Empty Sets Rule:
  * - Empty topics (`[]`) earns 0 topic similarity.
- * - Empty timeSlots (`[]`) earns 0 availability score.
- * - Empty learningPreferences (`[]`) earns 0 preference score.
+ * - Empty timeSlots (`[]`) earns 0 schedule score.
+ * - Empty goals (`[]`) earns 0 goals score.
+ *
+ * Academic Marks Rule:
+ * - Marks are optional. Missing marks are never penalized.
+ * - Mismatched grade scales are never silently converted or compared.
  *
  * @param {Object} studentA
- * @param {string} studentA.courseCode
- * @param {string[]} studentA.topics
- * @param {string[]} studentA.timeSlots
- * @param {string[]} studentA.learningPreferences
  * @param {Object} studentB
- * @param {string} studentB.courseCode
- * @param {string[]} studentB.topics
- * @param {string[]} studentB.timeSlots
- * @param {string[]} studentB.learningPreferences
  * @returns {CompatibilityResult}
  */
 export function calculateStudyCompatibility(studentA, studentB) {
@@ -670,7 +882,7 @@ export function calculateStudyCompatibility(studentA, studentB) {
   }
 
   // --------------------------------------------------------------------------
-  // 1. Course & Subject Overlap (40%)
+  // 1. Subject/Course Overlap (30%)
   // --------------------------------------------------------------------------
   const normCodeA = normalizeCourseCode(studentA.courseCode);
   const normCodeB = normalizeCourseCode(studentB.courseCode);
@@ -678,41 +890,120 @@ export function calculateStudyCompatibility(studentA, studentB) {
   const courseCodeScore = isExactCourseMatch ? 100 : 0;
 
   const topicSimilarity = jaccardSimilarity(studentA.topics, studentB.topics);
-  const courseSubjectScore = clampScore(0.7 * courseCodeScore + 0.3 * topicSimilarity);
+  const subjectCourseScore = clampScore(0.7 * courseCodeScore + 0.3 * topicSimilarity);
 
   // --------------------------------------------------------------------------
-  // 2. Shared Availability (35%)
+  // 2. Learning-Style Compatibility (25%)
   // --------------------------------------------------------------------------
-  const availabilityScore = clampScore(jaccardSimilarity(studentA.timeSlots, studentB.timeSlots));
+  const styleA = normalizeString(studentA.learningStyle);
+  const styleB = normalizeString(studentB.learningStyle);
+  let styleScore = 50;
+
+  if (styleA && styleB) {
+    if (styleA === styleB) {
+      styleScore = 100;
+    } else if (styleA === 'mixed' || styleB === 'mixed') {
+      styleScore = 75;
+    } else {
+      styleScore = 40;
+    }
+  } else if (styleA || styleB) {
+    styleScore = 70;
+  }
+
+  // Factor in learningPreferences if available
+  const prefsA = Array.isArray(studentA.learningPreferences) ? studentA.learningPreferences : [];
+  const prefsB = Array.isArray(studentB.learningPreferences) ? studentB.learningPreferences : [];
+  if (prefsA.length > 0 || prefsB.length > 0) {
+    const prefSim = jaccardSimilarity(prefsA, prefsB);
+    styleScore = clampScore(0.7 * styleScore + 0.3 * prefSim);
+  } else {
+    styleScore = clampScore(styleScore);
+  }
 
   // --------------------------------------------------------------------------
-  // 3. Learning Preferences Alignment (25%)
+  // 3. Shared Schedule (20%)
   // --------------------------------------------------------------------------
-  const preferencesScore = clampScore(
-    jaccardSimilarity(studentA.learningPreferences, studentB.learningPreferences)
-  );
+  const scheduleScore = clampScore(jaccardSimilarity(studentA.timeSlots, studentB.timeSlots));
 
   // --------------------------------------------------------------------------
-  // Factors Assembly
+  // 4. Academic-Level Compatibility (15%)
+  // --------------------------------------------------------------------------
+  const acadA = studentA.academicBackground || {};
+  const acadB = studentB.academicBackground || {};
+  const yearA = Number(acadA.yearOfStudy ?? studentA.yearOfStudy);
+  const yearB = Number(acadB.yearOfStudy ?? studentB.yearOfStudy);
+
+  let levelScore = 70;
+  let academicLevelExplanation = '';
+
+  if (Number.isInteger(yearA) && Number.isInteger(yearB) && yearA >= 1 && yearB >= 1) {
+    const diff = Math.abs(yearA - yearB);
+    if (diff === 0) {
+      levelScore = 100;
+      academicLevelExplanation = `Identical academic cohort (Year ${yearA} students).`;
+    } else if (diff === 1) {
+      levelScore = 80;
+      academicLevelExplanation = `Adjacent academic cohorts (Year ${yearA} and Year ${yearB}) with strong peer tutoring affinity.`;
+    } else if (diff === 2) {
+      levelScore = 50;
+      academicLevelExplanation = `Cross-year pairing (Year ${yearA} and Year ${yearB}).`;
+    } else {
+      levelScore = 25;
+      academicLevelExplanation = `Different academic stages (Year ${yearA} vs Year ${yearB}).`;
+    }
+  } else {
+    levelScore = 70;
+    academicLevelExplanation = 'Academic level compatibility evaluated from shared curriculum.';
+  }
+
+  // Safe academic performance check (informational, never penalizes missing marks or mismatched scales)
+  const perfA = studentA.academicPerformance;
+  const perfB = studentB.academicPerformance;
+  if (perfA && perfB && perfA.scale === perfB.scale) {
+    // Both declared same scale: no penalty regardless
+  }
+
+  // --------------------------------------------------------------------------
+  // 5. Goals Alignment (10%)
+  // --------------------------------------------------------------------------
+  const goalsA = Array.isArray(studentA.goals) ? studentA.goals : [];
+  const goalsB = Array.isArray(studentB.goals) ? studentB.goals : [];
+  const goalsScore = clampScore(jaccardSimilarity(goalsA, goalsB));
+
+  // --------------------------------------------------------------------------
+  // Factors Assembly (Weights sum to exactly 100%)
   // --------------------------------------------------------------------------
   const factors = [
     {
-      name: 'course_subject_overlap',
-      label: 'Course & Subject Overlap',
-      weight: STUDY_FACTOR_WEIGHTS.COURSE_SUBJECT_OVERLAP,
-      score: courseSubjectScore,
+      name: 'subject_course_overlap',
+      label: 'Subject/Course Overlap',
+      weight: STUDY_FACTOR_WEIGHTS.SUBJECT_COURSE_OVERLAP,
+      score: subjectCourseScore,
     },
     {
-      name: 'shared_availability',
-      label: 'Shared Availability',
-      weight: STUDY_FACTOR_WEIGHTS.SHARED_AVAILABILITY,
-      score: availabilityScore,
+      name: 'learning_style_compatibility',
+      label: 'Learning-Style Compatibility',
+      weight: STUDY_FACTOR_WEIGHTS.LEARNING_STYLE,
+      score: styleScore,
     },
     {
-      name: 'learning_preferences',
-      label: 'Learning Preferences',
-      weight: STUDY_FACTOR_WEIGHTS.LEARNING_PREFERENCES,
-      score: preferencesScore,
+      name: 'shared_schedule',
+      label: 'Shared Schedule',
+      weight: STUDY_FACTOR_WEIGHTS.SHARED_SCHEDULE,
+      score: scheduleScore,
+    },
+    {
+      name: 'academic_level_compatibility',
+      label: 'Academic-Level Compatibility',
+      weight: STUDY_FACTOR_WEIGHTS.ACADEMIC_LEVEL,
+      score: levelScore,
+    },
+    {
+      name: 'goals_alignment',
+      label: 'Goals Alignment',
+      weight: STUDY_FACTOR_WEIGHTS.GOALS_ALIGNMENT,
+      score: goalsScore,
     },
   ];
 
@@ -742,7 +1033,18 @@ export function calculateStudyCompatibility(studentA, studentB) {
     }
   }
 
-  // 2. Availability
+  // 2. Learning Style
+  if (styleA && styleB) {
+    if (styleA === styleB) {
+      reasons.push(`Complementary study style: both peers prefer ${styleA.replace(/_/g, ' ')} learning.`);
+    } else if (styleA === 'mixed' || styleB === 'mixed') {
+      reasons.push(`Adaptable study style match (${styleA.replace(/_/g, ' ')} and ${styleB.replace(/_/g, ' ')}).`);
+    } else {
+      reasons.push(`Different learning styles (${styleA.replace(/_/g, ' ')} vs ${styleB.replace(/_/g, ' ')}).`);
+    }
+  }
+
+  // 3. Schedule
   const sharedSlots = studentA.timeSlots.filter((slot) =>
     studentB.timeSlots.some((bs) => normalizeSlot(bs) === normalizeSlot(slot))
   );
@@ -756,26 +1058,24 @@ export function calculateStudyCompatibility(studentA, studentB) {
     reasons.push('You have no shared available study slots.');
   }
 
-  // 3. Learning Preferences
-  const sharedPrefs = studentA.learningPreferences.filter((p) =>
-    studentB.learningPreferences.some((bp) => normalizeString(bp) === normalizeString(p))
-  );
+  // 4. Academic level
+  if (academicLevelExplanation) {
+    reasons.push(academicLevelExplanation);
+  }
 
-  if (sharedPrefs.length > 0) {
-    reasons.push(`Shared learning preferences: ${sharedPrefs.join(', ')}.`);
-  } else if (studentA.learningPreferences.length === 0 && studentB.learningPreferences.length === 0) {
-    reasons.push('Neither student declared learning preferences (0% preference alignment).');
-  } else if (studentA.learningPreferences.length > 0 || studentB.learningPreferences.length > 0) {
-    reasons.push('Different learning preferences between study partners.');
-  } else {
-    reasons.push('No specific learning preferences declared.');
+  // 5. Goals
+  const sharedGoals = goalsA.filter((g) =>
+    goalsB.some((bg) => normalizeString(bg) === normalizeString(g))
+  );
+  if (sharedGoals.length > 0) {
+    reasons.push(`Shared study goals: ${sharedGoals.join(', ')}.`);
   }
 
   return calculatedResult(factors, reasons);
 }
 
 // ============================================================================
-// 3. SKILLSWAP COMPATIBILITY ENGINE
+// 3. SKILLSWAP COMPATIBILITY ENGINE (5 Factors, 100%)
 // ============================================================================
 
 /**
@@ -838,32 +1138,33 @@ function validateSkillSwapInput(studentA, studentB) {
     errors.push('studentB.weeklyHours must be a positive number (> 0).');
   }
 
+  // Learning style validation if provided
+  if (studentA.learningStyle !== undefined && studentA.learningStyle !== null && !isValidLearningStyle(studentA.learningStyle)) {
+    errors.push(`studentA.learningStyle must be one of: ${LEARNING_STYLES.join(', ')}.`);
+  }
+  if (studentB.learningStyle !== undefined && studentB.learningStyle !== null && !isValidLearningStyle(studentB.learningStyle)) {
+    errors.push(`studentB.learningStyle must be one of: ${LEARNING_STYLES.join(', ')}.`);
+  }
+
   return errors;
 }
 
 /**
- * Calculates SkillSwap Compatibility between two students engaging in a peer skill exchange.
+ * Calculates SkillSwap Compatibility between two students in a peer skill exchange.
  *
- * Factors & Weights:
- * - Reciprocal Skill Complementarity: 60% (min(A->B coverage, B->A coverage))
- * - Skill Depth & Target Level: 20% (Proficiency level vs requested target level across reciprocal pairs)
- * - Availability & Cadence Alignment: 20% (70% time slot overlap Jaccard, 30% weekly hours ratio)
+ * Factors & Exact Weights (Sum: 100%):
+ * 1. Reciprocal teach/want relationship: 40% (strict bilateral reciprocity; one-way matches get 0)
+ * 2. Skill-level compatibility: 20%
+ * 3. Goals alignment: 15%
+ * 4. Availability compatibility: 15%
+ * 5. Learning-style compatibility: 10%
  *
- * Empty Sets Rule:
- * - When desiredSkills or offeredSkills are empty, coverage is 0 and reciprocal score is 0.
- * - When no reciprocal pairs exist, skill depth score is 0.
- * - When timeSlots are empty, slot overlap is 0.
+ * Strict Reciprocity Rule:
+ * - Both directions must offer matching skills: A offers what B desires AND B offers what A desires.
+ * - One-way matches earn 0 for reciprocal teach/want factor and are never presented as reciprocal exchanges.
  *
  * @param {Object} studentA
- * @param {Array<{ name: string, level: number }>} studentA.offeredSkills
- * @param {Array<{ name: string, targetLevel: number }>} studentA.desiredSkills
- * @param {string[]} studentA.timeSlots
- * @param {number} studentA.weeklyHours
  * @param {Object} studentB
- * @param {Array<{ name: string, level: number }>} studentB.offeredSkills
- * @param {Array<{ name: string, targetLevel: number }>} studentB.desiredSkills
- * @param {string[]} studentB.timeSlots
- * @param {number} studentB.weeklyHours
  * @returns {CompatibilityResult}
  */
 export function calculateSkillSwapCompatibility(studentA, studentB) {
@@ -873,7 +1174,7 @@ export function calculateSkillSwapCompatibility(studentA, studentB) {
   }
 
   // --------------------------------------------------------------------------
-  // 1. Reciprocal Skill Complementarity (60%)
+  // 1. Reciprocal Teach/Want Relationship (40%)
   // --------------------------------------------------------------------------
   // Direction A -> B: A offers what B desires
   const matchedSkillsAtoB = [];
@@ -890,9 +1191,8 @@ export function calculateSkillSwapCompatibility(studentA, studentB) {
     }
   }
 
-  const coverageAtoB = studentB.desiredSkills.length === 0
-    ? 0
-    : matchedSkillsAtoB.length / studentB.desiredSkills.length;
+  const coverageAtoB =
+    studentB.desiredSkills.length === 0 ? 0 : matchedSkillsAtoB.length / studentB.desiredSkills.length;
 
   // Direction B -> A: B offers what A desires
   const matchedSkillsBtoA = [];
@@ -909,56 +1209,98 @@ export function calculateSkillSwapCompatibility(studentA, studentB) {
     }
   }
 
-  const coverageBtoA = studentA.desiredSkills.length === 0
-    ? 0
-    : matchedSkillsBtoA.length / studentA.desiredSkills.length;
+  const coverageBtoA =
+    studentA.desiredSkills.length === 0 ? 0 : matchedSkillsBtoA.length / studentA.desiredSkills.length;
 
-  // Reciprocal complementarity uses the lower of the two directional coverage scores
-  const reciprocalScore = clampScore(Math.min(coverageAtoB, coverageBtoA) * 100);
+  // Strict bilateral reciprocity: one-way matches get 0!
+  let reciprocalScore = 0;
+  const isBilateral = matchedSkillsAtoB.length > 0 && matchedSkillsBtoA.length > 0;
 
-  // --------------------------------------------------------------------------
-  // 2. Skill Depth & Target Level (20%)
-  // --------------------------------------------------------------------------
-  let skillDepthScore = 0;
-  const hasReciprocalPairs = matchedSkillsAtoB.length > 0 && matchedSkillsBtoA.length > 0;
-
-  if (hasReciprocalPairs) {
-    const allPairs = [...pairScoresAtoB, ...pairScoresBtoA];
-    const avg = allPairs.reduce((sum, val) => sum + val, 0) / allPairs.length;
-    skillDepthScore = clampScore(avg);
+  if (isBilateral) {
+    reciprocalScore = clampScore(Math.min(coverageAtoB, coverageBtoA) * 100);
+  } else {
+    reciprocalScore = 0;
   }
 
   // --------------------------------------------------------------------------
-  // 3. Availability & Cadence Alignment (20%)
+  // 2. Skill-Level Compatibility (20%)
+  // --------------------------------------------------------------------------
+  let skillLevelScore = 0;
+  if (isBilateral) {
+    const allPairs = [...pairScoresAtoB, ...pairScoresBtoA];
+    const avg = allPairs.reduce((sum, val) => sum + val, 0) / allPairs.length;
+    skillLevelScore = clampScore(avg);
+  } else {
+    skillLevelScore = 0;
+  }
+
+  // --------------------------------------------------------------------------
+  // 3. Goals Alignment (15%)
+  // --------------------------------------------------------------------------
+  const goalsA = Array.isArray(studentA.goals) ? studentA.goals : [];
+  const goalsB = Array.isArray(studentB.goals) ? studentB.goals : [];
+  const goalsScore = clampScore(jaccardSimilarity(goalsA, goalsB));
+
+  // --------------------------------------------------------------------------
+  // 4. Availability Compatibility (15%)
   // --------------------------------------------------------------------------
   const slotOverlap = jaccardSimilarity(studentA.timeSlots, studentB.timeSlots);
   const hoursA = Number(studentA.weeklyHours);
   const hoursB = Number(studentB.weeklyHours);
   const cadenceRatio = (Math.min(hoursA, hoursB) / Math.max(hoursA, hoursB)) * 100;
 
-  const availabilityCadenceScore = clampScore(0.7 * slotOverlap + 0.3 * cadenceRatio);
+  const availabilityScore = clampScore(0.7 * slotOverlap + 0.3 * cadenceRatio);
 
   // --------------------------------------------------------------------------
-  // Factors Assembly
+  // 5. Learning-Style Compatibility (10%)
+  // --------------------------------------------------------------------------
+  const styleA = normalizeString(studentA.learningStyle);
+  const styleB = normalizeString(studentB.learningStyle);
+  let learningScore = 70;
+
+  if (styleA && styleB) {
+    if (styleA === styleB) {
+      learningScore = 100;
+    } else if (styleA === 'mixed' || styleB === 'mixed') {
+      learningScore = 75;
+    } else {
+      learningScore = 40;
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // Factors Assembly (Weights sum to exactly 100%)
   // --------------------------------------------------------------------------
   const factors = [
     {
-      name: 'reciprocal_skills',
-      label: 'Reciprocal Skill Complementarity',
-      weight: SKILLSWAP_FACTOR_WEIGHTS.RECIPROCAL_SKILLS,
+      name: 'reciprocal_teach_want',
+      label: 'Reciprocal Teach/Want Relationship',
+      weight: SKILLSWAP_FACTOR_WEIGHTS.RECIPROCAL_TEACH_WANT,
       score: reciprocalScore,
     },
     {
-      name: 'skill_depth',
-      label: 'Skill Depth & Target Level',
-      weight: SKILLSWAP_FACTOR_WEIGHTS.SKILL_DEPTH,
-      score: skillDepthScore,
+      name: 'skill_level_compatibility',
+      label: 'Skill-Level Compatibility',
+      weight: SKILLSWAP_FACTOR_WEIGHTS.SKILL_LEVEL,
+      score: skillLevelScore,
     },
     {
-      name: 'availability_cadence',
-      label: 'Availability & Cadence Alignment',
-      weight: SKILLSWAP_FACTOR_WEIGHTS.AVAILABILITY_CADENCE,
-      score: availabilityCadenceScore,
+      name: 'goals_alignment',
+      label: 'Goals Alignment',
+      weight: SKILLSWAP_FACTOR_WEIGHTS.GOALS_ALIGNMENT,
+      score: goalsScore,
+    },
+    {
+      name: 'availability_compatibility',
+      label: 'Availability Compatibility',
+      weight: SKILLSWAP_FACTOR_WEIGHTS.AVAILABILITY,
+      score: availabilityScore,
+    },
+    {
+      name: 'learning_style_compatibility',
+      label: 'Learning-Style Compatibility',
+      weight: SKILLSWAP_FACTOR_WEIGHTS.LEARNING_STYLE,
+      score: learningScore,
     },
   ];
 
@@ -967,24 +1309,23 @@ export function calculateSkillSwapCompatibility(studentA, studentB) {
   // --------------------------------------------------------------------------
   const reasons = [];
 
-  // 1. Reciprocal complementarity explanation
   const namesAtoB = matchedSkillsAtoB.map((s) => s.name);
   const namesBtoA = matchedSkillsBtoA.map((s) => s.name);
 
   if (studentA.desiredSkills.length === 0 && studentB.desiredSkills.length === 0) {
     reasons.push('Neither student declared skills they desire to learn (0% reciprocal complementarity).');
-  } else if (hasReciprocalPairs) {
+  } else if (isBilateral) {
     reasons.push(`Mutual skill exchange: you offer ${namesAtoB.join(', ')} while your peer offers ${namesBtoA.join(', ')}.`);
   } else if (namesAtoB.length > 0 && namesBtoA.length === 0) {
-    reasons.push(`One-way match: you offer ${namesAtoB.join(', ')} desired by your peer, but your peer does not offer any of your desired skills.`);
+    reasons.push(`One-way match: you offer ${namesAtoB.join(', ')} desired by your peer, but your peer does not offer any of your desired skills (0% reciprocal exchange).`);
   } else if (namesBtoA.length > 0 && namesAtoB.length === 0) {
-    reasons.push(`One-way match: your peer offers ${namesBtoA.join(', ')} that you desire, but you do not offer any of their desired skills.`);
+    reasons.push(`One-way match: your peer offers ${namesBtoA.join(', ')} that you desire, but you do not offer any of their desired skills (0% reciprocal exchange).`);
   } else {
     reasons.push('No reciprocal skill matches found between offered and desired skill sets.');
   }
 
   // 2. Skill Depth explanation
-  if (hasReciprocalPairs) {
+  if (isBilateral) {
     const allMet = [...matchedSkillsAtoB, ...matchedSkillsBtoA].every((p) => p.teacherLevel >= p.targetLevel);
     if (allMet) {
       reasons.push('Teaching proficiency levels meet or exceed requested target levels for all reciprocal skills.');
@@ -995,7 +1336,15 @@ export function calculateSkillSwapCompatibility(studentA, studentB) {
     reasons.push('No reciprocal skill pairs available to evaluate teaching proficiency depth.');
   }
 
-  // 3. Availability explanation
+  // 3. Goals explanation
+  const sharedGoals = goalsA.filter((g) =>
+    goalsB.some((bg) => normalizeString(bg) === normalizeString(g))
+  );
+  if (sharedGoals.length > 0) {
+    reasons.push(`Shared learning and exchange goals: ${sharedGoals.join(', ')}.`);
+  }
+
+  // 4. Availability explanation
   const sharedSlots = studentA.timeSlots.filter((slot) =>
     studentB.timeSlots.some((bs) => normalizeSlot(bs) === normalizeSlot(slot))
   );
@@ -1009,7 +1358,7 @@ export function calculateSkillSwapCompatibility(studentA, studentB) {
     reasons.push('No shared available time slots for live exchange sessions.');
   }
 
-  // 4. Cadence explanation
+  // 5. Cadence explanation
   reasons.push(
     `Weekly commitment alignment: ${hoursA}h/week vs ${hoursB}h/week (${Math.round(cadenceRatio)}% cadence match).`
   );

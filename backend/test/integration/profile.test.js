@@ -141,6 +141,7 @@ describe('SkillSync StudentProfile API - Integration Tests', () => {
         learningPreferences: ['problem_solving', 'discussion'],
         desiredSkills: [{ name: 'Python', targetLevel: 4 }],
         weeklyHours: 5,
+        learningStyle: 'discussion',
       };
 
       const res = await fetch(`${baseUrl}/api/profile/me`, {
@@ -491,6 +492,7 @@ describe('SkillSync StudentProfile API - Integration Tests', () => {
           goals: [],
           timeline: 'flexible',
           workingStyle: 'asynchronous',
+          learningStyle: 'visual',
         }),
       });
 
@@ -498,7 +500,7 @@ describe('SkillSync StudentProfile API - Integration Tests', () => {
       const data = await res.json();
       assert.deepEqual(data.profile.skills, []);
       assert.deepEqual(data.profile.timeSlots, []);
-      // Project mode is now complete because all 5 required fields are declared (even if skills is [])
+      // Project mode is now complete because all required fields are declared (even if skills is [])
       assert.equal(data.completeness.project.isComplete, true);
     });
 
@@ -516,6 +518,193 @@ describe('SkillSync StudentProfile API - Integration Tests', () => {
           return true;
         }
       );
+    });
+  });
+
+  // ==========================================================================
+  // 5. Phase 5D Extended Profile Fields & Grade Scale Validation
+  // ==========================================================================
+  describe('5. Phase 5D Extended Profile Fields & Grade Scale Validation', () => {
+    it('saves and retrieves full academic background and project experience', async () => {
+      const payload = {
+        academicBackground: {
+          degree: 'Bachelor of Technology',
+          branch: 'Computer Science and Engineering',
+          yearOfStudy: 3,
+          semester: 6,
+          relevantSubjects: ['Algorithms', 'Distributed Systems', 'Cloud Computing'],
+        },
+        academicPerformance: {
+          scale: 'percentage',
+          score: 88.5,
+        },
+        learningStyle: 'hands_on',
+        projectIdeas: [
+          {
+            title: 'Decentralized Peer Study Hub',
+            description: 'A WebRTC-based study room system with collaborative markdown editing.',
+            tags: ['webrtc', 'react', 'nodejs'],
+          },
+        ],
+        previousProjects: [
+          {
+            title: 'Campus Food Delivery Bot',
+            skills: ['Python', 'FastAPI'],
+            domain: ['automation', 'bots'],
+            role: 'Backend Lead',
+            achievements: 'Served 2,000+ orders across campus in Fall 2025.',
+          },
+        ],
+        achievements: ['Dean’s Honor List 2025', '1st Place Hackathon Winner'],
+        collaborationPreferences: ['Async-first', 'Slack for communication', 'Weekend sprint sessions'],
+      };
+
+      const res = await fetch(`${baseUrl}/api/profile/me`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Cookie: userACookie },
+        body: JSON.stringify(payload),
+      });
+
+      assert.equal(res.status, 200);
+      const data = await res.json();
+      assert.equal(data.profile.academicBackground.degree, 'Bachelor of Technology');
+      assert.equal(data.profile.academicBackground.yearOfStudy, 3);
+      assert.deepEqual(data.profile.academicBackground.relevantSubjects, ['Algorithms', 'Distributed Systems', 'Cloud Computing']);
+      assert.equal(data.profile.academicPerformance.scale, 'percentage');
+      assert.equal(data.profile.academicPerformance.score, 88.5);
+      assert.equal(data.profile.learningStyle, 'hands_on');
+      assert.equal(data.profile.projectIdeas.length, 1);
+      assert.equal(data.profile.projectIdeas[0].title, 'Decentralized Peer Study Hub');
+      assert.equal(data.profile.previousProjects.length, 1);
+      assert.equal(data.profile.previousProjects[0].role, 'Backend Lead');
+      assert.deepEqual(data.profile.achievements, ['Dean’s Honor List 2025', '1st Place Hackathon Winner']);
+      assert.deepEqual(data.profile.collaborationPreferences, ['Async-first', 'Slack for communication', 'Weekend sprint sessions']);
+
+      // GET verification
+      const getRes = await fetch(`${baseUrl}/api/profile/me`, {
+        headers: { Cookie: userACookie },
+      });
+      assert.equal(getRes.status, 200);
+      const getData = await getRes.json();
+      assert.equal(getData.profile.learningStyle, 'hands_on');
+      assert.equal(getData.profile.academicPerformance.score, 88.5);
+    });
+
+    it('accepts and validates gpa_10 and gpa_4 scales accurately', async () => {
+      // Test gpa_10
+      const res10 = await fetch(`${baseUrl}/api/profile/me`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Cookie: userACookie },
+        body: JSON.stringify({
+          academicPerformance: { scale: 'gpa_10', score: 9.2 },
+        }),
+      });
+      assert.equal(res10.status, 200);
+      const data10 = await res10.json();
+      assert.equal(data10.profile.academicPerformance.scale, 'gpa_10');
+      assert.equal(data10.profile.academicPerformance.score, 9.2);
+
+      // Test gpa_4
+      const res4 = await fetch(`${baseUrl}/api/profile/me`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Cookie: userACookie },
+        body: JSON.stringify({
+          academicPerformance: { scale: 'gpa_4', score: 3.8 },
+        }),
+      });
+      assert.equal(res4.status, 200);
+      const data4 = await res4.json();
+      assert.equal(data4.profile.academicPerformance.scale, 'gpa_4');
+      assert.equal(data4.profile.academicPerformance.score, 3.8);
+    });
+
+    it('rejects out-of-bounds academic performance scores with HTTP 400', async () => {
+      // Score > 100 on percentage
+      const resPct = await fetch(`${baseUrl}/api/profile/me`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Cookie: userACookie },
+        body: JSON.stringify({
+          academicPerformance: { scale: 'percentage', score: 105 },
+        }),
+      });
+      assert.equal(resPct.status, 400);
+      const dataPct = await resPct.json();
+      assert.ok(dataPct.error.includes('out of bounds'));
+
+      // Score > 10 on gpa_10
+      const res10 = await fetch(`${baseUrl}/api/profile/me`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Cookie: userACookie },
+        body: JSON.stringify({
+          academicPerformance: { scale: 'gpa_10', score: 10.5 },
+        }),
+      });
+      assert.equal(res10.status, 400);
+
+      // Score > 4 on gpa_4
+      const res4 = await fetch(`${baseUrl}/api/profile/me`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Cookie: userACookie },
+        body: JSON.stringify({
+          academicPerformance: { scale: 'gpa_4', score: 4.5 },
+        }),
+      });
+      assert.equal(res4.status, 400);
+    });
+
+    it('rejects unsupported grade scales with HTTP 400', async () => {
+      const res = await fetch(`${baseUrl}/api/profile/me`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Cookie: userACookie },
+        body: JSON.stringify({
+          academicPerformance: { scale: 'gpa_5', score: 4.0 },
+        }),
+      });
+      assert.equal(res.status, 400);
+      const data = await res.json();
+      assert.ok(data.error.includes('scale must be one of'));
+    });
+
+    it('allows clearing optional academicPerformance by passing null', async () => {
+      const res = await fetch(`${baseUrl}/api/profile/me`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Cookie: userACookie },
+        body: JSON.stringify({
+          academicPerformance: null,
+        }),
+      });
+      assert.equal(res.status, 200);
+      const data = await res.json();
+      assert.equal(data.profile.academicPerformance, undefined);
+    });
+
+    it('rejects invalid learningStyle options with HTTP 400', async () => {
+      const res = await fetch(`${baseUrl}/api/profile/me`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Cookie: userACookie },
+        body: JSON.stringify({
+          learningStyle: 'telepathic',
+        }),
+      });
+      assert.equal(res.status, 400);
+      const data = await res.json();
+      assert.ok(data.error.includes('learningStyle must be one of'));
+    });
+
+    it('rejects unexpected properties inside academicBackground with HTTP 400', async () => {
+      const res = await fetch(`${baseUrl}/api/profile/me`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Cookie: userACookie },
+        body: JSON.stringify({
+          academicBackground: {
+            degree: 'B.S.',
+            deanName: 'Prof. Smith', // unexpected!
+          },
+        }),
+      });
+      assert.equal(res.status, 400);
+      const data = await res.json();
+      assert.ok(data.error.includes('Unexpected property in academicBackground: deanName'));
     });
   });
 });

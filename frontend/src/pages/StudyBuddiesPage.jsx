@@ -8,6 +8,8 @@ import {
   ArrowRight,
   Sliders,
   CheckCircle2,
+  Sparkles,
+  Target,
 } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
@@ -94,50 +96,52 @@ export function StudyBuddiesPage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {/* Factor 1: Course Code (Accounts for 70% of Course/Topic factor) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Factor 1: Subject/Course Overlap (30%) */}
           <Card className="p-4 space-y-2.5">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-medium text-text-muted uppercase tracking-wider">
-                Course Code
+                Course & Topics (30%)
               </span>
-              <GraduationCap className="w-3.5 h-3.5 text-accent" />
+              <BookOpen className="w-3.5 h-3.5 text-accent" />
             </div>
             <div className="space-y-1">
               <span className="text-sm font-medium text-text-main block uppercase">
                 {profile?.courseCode || 'Not specified'}
               </span>
-              <p className="text-[11px] text-text-muted">
-                Exact course code alignment is required for high affinity
-              </p>
-            </div>
-          </Card>
-
-          {/* Factor 2: Topics Jaccard Similarity (30% of Course/Topic factor) */}
-          <Card className="p-4 space-y-2.5">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-medium text-text-muted uppercase tracking-wider">
-                Topics
-              </span>
-              <BookOpen className="w-3.5 h-3.5 text-accent" />
-            </div>
-            <div className="space-y-1">
-              <span className="text-sm font-medium text-text-main block">
-                {profile?.topics?.length || 0} Topics
-              </span>
               <p className="text-[11px] text-text-muted line-clamp-2">
                 {profile?.topics && profile.topics.length > 0
-                  ? profile.topics.join(', ')
-                  : 'No topics added'}
+                  ? `Active topics: ${profile.topics.join(', ')}`
+                  : 'Course code match (70%) and topic overlap (30%)'}
               </p>
             </div>
           </Card>
 
-          {/* Factor 3: Shared Availability (35% weight) */}
+          {/* Factor 2: Learning-Style Compatibility (25%) */}
           <Card className="p-4 space-y-2.5">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-medium text-text-muted uppercase tracking-wider">
-                Availability (35%)
+                Learning Style (25%)
+              </span>
+              <Sparkles className="w-3.5 h-3.5 text-accent" />
+            </div>
+            <div className="space-y-1">
+              <span className="text-sm font-medium text-text-main block capitalize">
+                {profile?.learningStyle ? profile.learningStyle.replace(/_/g, ' ') : 'Not declared'}
+              </span>
+              <p className="text-[11px] text-text-muted line-clamp-2">
+                {profile?.learningPreferences && profile.learningPreferences.length > 0
+                  ? `Formats: ${profile.learningPreferences.join(', ')}`
+                  : 'Cognitive learning style and study preferences'}
+              </p>
+            </div>
+          </Card>
+
+          {/* Factor 3: Shared Schedule (20%) */}
+          <Card className="p-4 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-medium text-text-muted uppercase tracking-wider">
+                Schedule (20%)
               </span>
               <Calendar className="w-3.5 h-3.5 text-accent" />
             </div>
@@ -146,27 +150,47 @@ export function StudyBuddiesPage() {
                 {profile?.timeSlots?.length || 0} Weekly Windows
               </span>
               <p className="text-[11px] text-text-muted">
-                Calculates direct overlap in weekly study slots
+                Calculates direct overlap in weekly study times
               </p>
             </div>
           </Card>
 
-          {/* Factor 4: Learning Preferences (25% weight) */}
+          {/* Factor 4: Academic-Level Compatibility (15%) */}
           <Card className="p-4 space-y-2.5">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-medium text-text-muted uppercase tracking-wider">
-                Preferences (25%)
+                Academic Level (15%)
               </span>
-              <Compass className="w-3.5 h-3.5 text-accent" />
+              <GraduationCap className="w-3.5 h-3.5 text-accent" />
             </div>
             <div className="space-y-1">
               <span className="text-sm font-medium text-text-main block">
-                {profile?.learningPreferences?.length || 0} Formats
+                {profile?.academicBackground?.yearOfStudy
+                  ? `Year ${profile.academicBackground.yearOfStudy}`
+                  : profile?.academicBackground?.degree || 'Academic Cohort'}
+              </span>
+              <p className="text-[11px] text-text-muted">
+                Cohort alignment and peer tutoring stage affinity
+              </p>
+            </div>
+          </Card>
+
+          {/* Factor 5: Goals Alignment (10%) */}
+          <Card className="p-4 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-medium text-text-muted uppercase tracking-wider">
+                Goals (10%)
+              </span>
+              <Target className="w-3.5 h-3.5 text-accent" />
+            </div>
+            <div className="space-y-1">
+              <span className="text-sm font-medium text-text-main block">
+                {profile?.goals?.length || 0} Declared Goals
               </span>
               <p className="text-[11px] text-text-muted line-clamp-2">
-                {profile?.learningPreferences && profile.learningPreferences.length > 0
-                  ? profile.learningPreferences.join(', ')
-                  : 'No formats added'}
+                {profile?.goals && profile.goals.length > 0
+                  ? profile.goals.map((g) => g.replace(/_/g, ' ')).join(', ')
+                  : 'Shared exam preparation and study goals'}
               </p>
             </div>
           </Card>

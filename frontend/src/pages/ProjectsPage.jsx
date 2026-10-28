@@ -22,6 +22,8 @@ import {
   Clock,
   Briefcase,
   Layers,
+  GraduationCap,
+  Sparkles,
 } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
@@ -531,12 +533,12 @@ export function ProjectsPage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {/* Factor 1: Skills Alignment (40%) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Factor 1: Skills Alignment (30%) */}
           <Card className="p-4 space-y-2.5">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-medium text-text-muted uppercase tracking-wider">
-                Skills (40%)
+                Skills (30%)
               </span>
               <Code2 className="w-3.5 h-3.5 text-accent" />
             </div>
@@ -552,31 +554,11 @@ export function ProjectsPage() {
             </div>
           </Card>
 
-          {/* Factor 2: Schedule Overlap (25%) */}
+          {/* Factor 2: Goals Alignment (20%) */}
           <Card className="p-4 space-y-2.5">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-medium text-text-muted uppercase tracking-wider">
-                Schedule (25%)
-              </span>
-              <Calendar className="w-3.5 h-3.5 text-accent" />
-            </div>
-            <div className="space-y-1">
-              <span className="text-sm font-medium text-text-main block">
-                {profile?.timeSlots?.length || 0} Time Windows
-              </span>
-              <p className="text-[11px] text-text-muted">
-                {profile?.timeSlots?.length
-                  ? `${profile.timeSlots.length} weekly slots chosen`
-                  : 'No slots configured'}
-              </p>
-            </div>
-          </Card>
-
-          {/* Factor 3: Goals & Urgency (20%) */}
-          <Card className="p-4 space-y-2.5">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-medium text-text-muted uppercase tracking-wider">
-                Goals & Urgency (20%)
+                Goals (20%)
               </span>
               <Target className="w-3.5 h-3.5 text-accent" />
             </div>
@@ -590,25 +572,85 @@ export function ProjectsPage() {
                   : 'No project goals declared'}
               </p>
               <p className="text-[10px] text-text-muted pt-0.5">
-                Combines goal similarity (60% of factor) and timeline compatibility (40%)
+                Goal focus similarity (60%) and timeline compatibility (40%)
               </p>
             </div>
           </Card>
 
-          {/* Factor 4: Working Style (15%) */}
+          {/* Factor 3: Relevant Project Experience (15%) */}
           <Card className="p-4 space-y-2.5">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-medium text-text-muted uppercase tracking-wider">
-                Style (15%)
+                Experience (15%)
               </span>
-              <Users className="w-3.5 h-3.5 text-accent" />
+              <Briefcase className="w-3.5 h-3.5 text-accent" />
+            </div>
+            <div className="space-y-1">
+              <span className="text-sm font-medium text-text-main block">
+                {profile?.previousProjects?.length || 0} Past Projects
+              </span>
+              <p className="text-[11px] text-text-muted">
+                {profile?.previousProjects?.length
+                  ? `${profile.previousProjects.length} completed project(s) backing technical competencies`
+                  : 'No past projects declared (0% experience score)'}
+              </p>
+            </div>
+          </Card>
+
+          {/* Factor 4: Academic Relevance (15%) */}
+          <Card className="p-4 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-medium text-text-muted uppercase tracking-wider">
+                Academic Fit (15%)
+              </span>
+              <GraduationCap className="w-3.5 h-3.5 text-accent" />
+            </div>
+            <div className="space-y-1">
+              <span className="text-sm font-medium text-text-main block">
+                {profile?.academicBackground?.degree || profile?.academicBackground?.branch || 'Academic Profile'}
+              </span>
+              <p className="text-[11px] text-text-muted line-clamp-2">
+                {profile?.academicBackground?.relevantSubjects?.length
+                  ? `Coursework: ${profile.academicBackground.relevantSubjects.join(', ')}`
+                  : 'Never penalizes projects without academic prerequisites'}
+              </p>
+            </div>
+          </Card>
+
+          {/* Factor 5: Availability Compatibility (10%) */}
+          <Card className="p-4 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-medium text-text-muted uppercase tracking-wider">
+                Availability (10%)
+              </span>
+              <Calendar className="w-3.5 h-3.5 text-accent" />
+            </div>
+            <div className="space-y-1">
+              <span className="text-sm font-medium text-text-main block">
+                {profile?.timeSlots?.length || 0} Time Windows
+              </span>
+              <p className="text-[11px] text-text-muted">
+                {profile?.timeSlots?.length
+                  ? `${profile.timeSlots.length} weekly recurring windows`
+                  : 'No slots configured'}
+              </p>
+            </div>
+          </Card>
+
+          {/* Factor 6: Learning-Style Compatibility (10%) */}
+          <Card className="p-4 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-medium text-text-muted uppercase tracking-wider">
+                Learning Style (10%)
+              </span>
+              <Sparkles className="w-3.5 h-3.5 text-accent" />
             </div>
             <div className="space-y-1">
               <span className="text-sm font-medium text-text-main block capitalize">
-                {profile?.workingStyle || 'Not set'}
+                {profile?.learningStyle ? profile.learningStyle.replace(/_/g, ' ') : 'Hands on'}
               </span>
               <p className="text-[11px] text-text-muted">
-                Sync vs async cadence alignment
+                Student learning preference alignment with project collaboration style
               </p>
             </div>
           </Card>

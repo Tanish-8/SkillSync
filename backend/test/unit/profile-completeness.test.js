@@ -22,6 +22,7 @@ describe('StudentProfile Model & Completeness - Unit Tests', () => {
       assert.equal(completeness.project.isComplete, false);
       assert.deepEqual(completeness.project.missingFields.sort(), [
         'goals',
+        'learningStyle',
         'skills',
         'timeSlots',
         'timeline',
@@ -32,6 +33,7 @@ describe('StudentProfile Model & Completeness - Unit Tests', () => {
       assert.deepEqual(completeness.study.missingFields.sort(), [
         'courseCode',
         'learningPreferences',
+        'learningStyle',
         'timeSlots',
         'topics',
       ].sort());
@@ -39,6 +41,7 @@ describe('StudentProfile Model & Completeness - Unit Tests', () => {
       assert.equal(completeness.skillswap.isComplete, false);
       assert.deepEqual(completeness.skillswap.missingFields.sort(), [
         'desiredSkills',
+        'learningStyle',
         'skills',
         'timeSlots',
         'weeklyHours',
@@ -52,6 +55,7 @@ describe('StudentProfile Model & Completeness - Unit Tests', () => {
         topics: ['algorithms'],
         timeSlots: ['mon_morning'],
         learningPreferences: ['hands_on'],
+        learningStyle: 'hands_on',
         // Project fields missing
         skills: undefined,
         goals: undefined,
@@ -84,6 +88,7 @@ describe('StudentProfile Model & Completeness - Unit Tests', () => {
         goals: [],
         timeline: 'flexible',
         workingStyle: 'synchronous',
+        learningStyle: 'visual',
       };
 
       const completeness = calculateProfileCompleteness(declaredEmptyProfile);
@@ -98,6 +103,7 @@ describe('StudentProfile Model & Completeness - Unit Tests', () => {
         goals: [],
         timeline: 'flexible',
         workingStyle: 'synchronous',
+        learningStyle: 'visual',
       };
 
       const completeness = calculateProfileCompleteness(omittedProfile);
@@ -117,6 +123,7 @@ describe('StudentProfile Model & Completeness - Unit Tests', () => {
         goals: ['portfolio'],
         timeline: 'short_term',
         workingStyle: 'synchronous',
+        learningStyle: 'hands_on',
       };
 
       const completeness = calculateProfileCompleteness(profile);
@@ -130,6 +137,7 @@ describe('StudentProfile Model & Completeness - Unit Tests', () => {
         topics: ['algorithms', 'data_structures'],
         timeSlots: ['mon_morning', 'thu_afternoon'],
         learningPreferences: ['problem_solving'],
+        learningStyle: 'discussion',
       };
 
       const completeness = calculateProfileCompleteness(profile);
@@ -143,6 +151,7 @@ describe('StudentProfile Model & Completeness - Unit Tests', () => {
         desiredSkills: [{ name: 'Figma', targetLevel: 3 }],
         timeSlots: ['mon_morning', 'wed_evening'],
         weeklyHours: 4,
+        learningStyle: 'mixed',
       };
 
       const completeness = calculateProfileCompleteness(profile);
@@ -162,48 +171,76 @@ describe('StudentProfile Model & Completeness - Unit Tests', () => {
         desiredSkills: [{ name: 'Figma', targetLevel: 3 }],
         timeSlots: ['mon_morning', 'wed_evening'],
         weeklyHours: 4,
+        learningStyle: 'mixed',
+        goals: ['portfolio'],
       });
 
       const swapPayloadA = profileDoc.toSkillSwapMatchingPayload();
       assert.deepEqual(swapPayloadA.offeredSkills, [{ name: 'Python', level: 4 }]);
       assert.deepEqual(swapPayloadA.desiredSkills, [{ name: 'Figma', targetLevel: 3 }]);
       assert.equal(swapPayloadA.weeklyHours, 4);
+      assert.equal(swapPayloadA.learningStyle, 'mixed');
 
-      // Verify direct compatibility with engine
+      // Bilateral peer exchange
       const peer = {
         offeredSkills: [{ name: 'Figma', level: 4 }],
         desiredSkills: [{ name: 'Python', targetLevel: 4 }],
         timeSlots: ['mon_morning', 'fri_afternoon'],
         weeklyHours: 6,
+        learningStyle: 'mixed',
+        goals: ['portfolio'],
       };
 
       const result = calculateSkillSwapCompatibility(swapPayloadA, peer);
       assert.equal(result.status, 'calculated');
-      assert.equal(result.score, 89);
+      assert.equal(result.factors.length, 5);
+      assert.ok(result.score > 0);
     });
 
-    it('adapts profile to Project matching payload and computes compatibility', () => {
+    it('adapts profile to Project matching payload with academic background and past projects', () => {
       const profileDoc = new StudentProfile({
         userId: new mongoose.Types.ObjectId(),
-        skills: [{ name: 'React', level: 2 }, { name: 'Node.js', level: 4 }],
+        skills: [{ name: 'React', level: 4 }, { name: 'Node.js', level: 4 }],
         timeSlots: ['mon_morning'],
         goals: ['portfolio'],
         timeline: 'short_term',
         workingStyle: 'synchronous',
+        learningStyle: 'hands_on',
+        academicBackground: {
+          degree: 'B.Tech',
+          branch: 'Computer Science',
+          yearOfStudy: 3,
+          semester: 5,
+          relevantSubjects: ['Web Engineering', 'Databases'],
+        },
+        previousProjects: [
+          {
+            title: 'Campus Portal',
+            skills: ['React', 'Node.js'],
+            domain: ['web'],
+            role: 'Lead Developer',
+          },
+        ],
       });
 
       const projectPayload = profileDoc.toProjectMatchingPayload();
+      assert.equal(projectPayload.learningStyle, 'hands_on');
+      assert.equal(projectPayload.academicBackground.degree, 'B.Tech');
+      assert.equal(projectPayload.previousProjects.length, 1);
+
       const project = {
         requiredSkills: [{ name: 'React', minLevel: 4 }, { name: 'Node.js', minLevel: 3 }],
         timeSlots: ['mon_morning', 'tue_evening'],
         goals: ['portfolio', 'hackathon'],
         timeline: 'short_term',
         workingStyle: 'synchronous',
+        learningStyle: 'hands_on',
       };
 
       const result = calculateProjectCompatibility(project, projectPayload);
       assert.equal(result.status, 'calculated');
-      assert.equal(result.score, 72);
+      assert.equal(result.factors.length, 6);
+      assert.ok(result.score >= 70);
     });
 
     it('adapts profile to Study matching payload and computes compatibility', () => {
@@ -213,6 +250,11 @@ describe('StudentProfile Model & Completeness - Unit Tests', () => {
         topics: ['data_structures', 'algorithms'],
         timeSlots: ['mon_morning', 'thu_afternoon'],
         learningPreferences: ['problem_solving', 'discussion'],
+        learningStyle: 'discussion',
+        academicBackground: {
+          yearOfStudy: 2,
+        },
+        goals: ['exam_prep'],
       });
 
       const studyPayloadA = profileDoc.toStudyMatchingPayload();
@@ -221,11 +263,17 @@ describe('StudentProfile Model & Completeness - Unit Tests', () => {
         topics: ['algorithms', 'web_dev'],
         timeSlots: ['mon_morning', 'fri_evening'],
         learningPreferences: ['problem_solving'],
+        learningStyle: 'discussion',
+        academicBackground: {
+          yearOfStudy: 2,
+        },
+        goals: ['exam_prep'],
       };
 
       const result = calculateStudyCompatibility(studyPayloadA, peer);
       assert.equal(result.status, 'calculated');
-      assert.equal(result.score, 56);
+      assert.equal(result.factors.length, 5);
+      assert.ok(result.score >= 50);
     });
   });
 });

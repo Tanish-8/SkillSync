@@ -277,6 +277,18 @@ describe('Project Model & Controller Helpers - Unit Tests', () => {
         goals: ['portfolio'],
         timeline: 'Semester',
         workingStyle: 'mixed',
+        learningStyle: 'mixed',
+        academicBackground: {
+          degree: 'B.S.',
+          branch: 'Computer Science',
+          yearOfStudy: 3,
+        },
+        previousProjects: [
+          {
+            title: 'K8s Cluster',
+            skills: ['Kubernetes', 'TypeScript'],
+          },
+        ],
       };
 
       const result = calculateProjectCompatibility(projectPayload, candidateStudent);
@@ -284,7 +296,7 @@ describe('Project Model & Controller Helpers - Unit Tests', () => {
       assert.equal(result.status, 'calculated');
       assert.ok(typeof result.score === 'number');
       assert.ok(result.score > 80);
-      assert.equal(result.factors.length, 4);
+      assert.equal(result.factors.length, 6);
       assert.ok(result.reasons.length >= 3);
     });
   });

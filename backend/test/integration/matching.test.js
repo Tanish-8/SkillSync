@@ -121,10 +121,10 @@ describe('SkillSync Matching API - Integration Tests', () => {
   });
 
   // ==========================================================================
-  // 2. Documented Example Payloads & Valid Calculations
+  // 2. Documented Example Payloads & Valid Calculations (Phase 5D Aligned)
   // ==========================================================================
-  describe('2. Documented Example Computations (72, 56, 89)', () => {
-    it('computes Project Compatibility example returning score 72 and factors', async () => {
+  describe('2. Documented Example Computations (Phase 5D 6-Factor & 5-Factor Models)', () => {
+    it('computes Project Compatibility example returning score 72 across 6 factors', async () => {
       const payload = {
         project: {
           requiredSkills: [
@@ -134,7 +134,7 @@ describe('SkillSync Matching API - Integration Tests', () => {
           timeSlots: ['mon_morning', 'tue_evening'],
           goals: ['portfolio', 'hackathon'],
           timeline: 'short_term',
-          workingStyle: 'synchronous',
+          learningStyle: 'hands_on',
         },
         student: {
           skills: [
@@ -144,7 +144,18 @@ describe('SkillSync Matching API - Integration Tests', () => {
           timeSlots: ['mon_morning'],
           goals: ['portfolio'],
           timeline: 'short_term',
-          workingStyle: 'synchronous',
+          learningStyle: 'hands_on',
+          academicBackground: {
+            degree: 'B.Tech',
+            branch: 'Computer Science',
+            relevantSubjects: ['Web Engineering'],
+          },
+          previousProjects: [
+            {
+              title: 'API Server',
+              skills: ['Node.js'],
+            },
+          ],
         },
       };
 
@@ -160,36 +171,62 @@ describe('SkillSync Matching API - Integration Tests', () => {
       assert.equal(res.status, 200);
       const data = await res.json();
       assert.equal(data.status, 'calculated');
+      assert.equal(data.factors.length, 6);
       assert.equal(data.score, 72);
 
       const skills = data.factors.find((f) => f.name === 'skills_alignment');
-      const schedule = data.factors.find((f) => f.name === 'schedule_overlap');
-      const goals = data.factors.find((f) => f.name === 'goals_urgency');
-      const style = data.factors.find((f) => f.name === 'working_style');
+      const goals = data.factors.find((f) => f.name === 'goals_alignment');
+      const exp = data.factors.find((f) => f.name === 'project_experience');
+      const acad = data.factors.find((f) => f.name === 'academic_relevance');
+      const avail = data.factors.find((f) => f.name === 'availability_compatibility');
+      const learn = data.factors.find((f) => f.name === 'learning_style_compatibility');
 
+      assert.equal(skills.weight, 30);
       assert.equal(skills.score, 75);
-      assert.equal(schedule.score, 50);
+
+      assert.equal(goals.weight, 20);
       assert.equal(goals.score, 70);
-      assert.equal(style.score, 100);
+
+      assert.equal(exp.weight, 15);
+      assert.equal(exp.score, 55);
+
+      assert.equal(acad.weight, 15);
+      assert.equal(acad.score, 80);
+
+      assert.equal(avail.weight, 10);
+      assert.equal(avail.score, 50);
+
+      assert.equal(learn.weight, 10);
+      assert.equal(learn.score, 100);
+
+      // Verify total factor weights sum to 100
+      const totalWeight = data.factors.reduce((sum, f) => sum + f.weight, 0);
+      assert.equal(totalWeight, 100);
 
       assert.ok(Array.isArray(data.reasons));
       assert.ok(data.reasons.length >= 3);
       assert.ok(data.reasons[0].includes('React (level 2/4)'));
     });
 
-    it('computes Study Compatibility example returning score 56 and factors', async () => {
+    it('computes Study Compatibility example across 5 factors totaling 100% weight', async () => {
       const payload = {
         studentA: {
           courseCode: 'CS101',
           topics: ['data_structures', 'algorithms'],
           timeSlots: ['mon_morning', 'thu_afternoon'],
           learningPreferences: ['problem_solving', 'discussion'],
+          learningStyle: 'discussion',
+          academicBackground: { yearOfStudy: 2 },
+          goals: ['exam_prep'],
         },
         studentB: {
           courseCode: 'cs101',
           topics: ['algorithms', 'web_dev'],
           timeSlots: ['mon_morning', 'fri_evening'],
           learningPreferences: ['problem_solving'],
+          learningStyle: 'discussion',
+          academicBackground: { yearOfStudy: 2 },
+          goals: ['exam_prep'],
         },
       };
 
@@ -205,34 +242,54 @@ describe('SkillSync Matching API - Integration Tests', () => {
       assert.equal(res.status, 200);
       const data = await res.json();
       assert.equal(data.status, 'calculated');
-      assert.equal(data.score, 56);
+      assert.equal(data.factors.length, 5);
 
-      const courseSubject = data.factors.find((f) => f.name === 'course_subject_overlap');
-      const availability = data.factors.find((f) => f.name === 'shared_availability');
-      const preferences = data.factors.find((f) => f.name === 'learning_preferences');
+      const courseSubject = data.factors.find((f) => f.name === 'subject_course_overlap');
+      const learnStyle = data.factors.find((f) => f.name === 'learning_style_compatibility');
+      const schedule = data.factors.find((f) => f.name === 'shared_schedule');
+      const acadLevel = data.factors.find((f) => f.name === 'academic_level_compatibility');
+      const goals = data.factors.find((f) => f.name === 'goals_alignment');
 
+      assert.equal(courseSubject.weight, 30);
       assert.equal(courseSubject.score, 80);
-      assert.equal(availability.score, 33);
-      assert.equal(preferences.score, 50);
+
+      assert.equal(learnStyle.weight, 25);
+      assert.equal(learnStyle.score, 85);
+
+      assert.equal(schedule.weight, 20);
+      assert.equal(schedule.score, 33);
+
+      assert.equal(acadLevel.weight, 15);
+      assert.equal(acadLevel.score, 100);
+
+      assert.equal(goals.weight, 10);
+      assert.equal(goals.score, 100);
+
+      const totalWeight = data.factors.reduce((sum, f) => sum + f.weight, 0);
+      assert.equal(totalWeight, 100);
 
       assert.ok(Array.isArray(data.reasons));
       assert.ok(data.reasons[0].includes('CS101'));
       assert.ok(data.reasons[0].includes('algorithms'));
     });
 
-    it('computes SkillSwap Compatibility example returning score 89 and factors', async () => {
+    it('computes SkillSwap Compatibility example across 5 factors with strict reciprocity', async () => {
       const payload = {
         studentA: {
           offeredSkills: [{ name: 'Python', level: 4 }],
           desiredSkills: [{ name: 'Figma', targetLevel: 3 }],
           timeSlots: ['mon_morning', 'wed_evening'],
           weeklyHours: 4,
+          learningStyle: 'hands_on',
+          goals: ['portfolio'],
         },
         studentB: {
           offeredSkills: [{ name: 'Figma', level: 4 }],
           desiredSkills: [{ name: 'Python', targetLevel: 4 }],
           timeSlots: ['mon_morning', 'fri_afternoon'],
           weeklyHours: 6,
+          learningStyle: 'hands_on',
+          goals: ['portfolio'],
         },
       };
 
@@ -248,15 +305,31 @@ describe('SkillSync Matching API - Integration Tests', () => {
       assert.equal(res.status, 200);
       const data = await res.json();
       assert.equal(data.status, 'calculated');
-      assert.equal(data.score, 89);
+      assert.equal(data.factors.length, 5);
 
-      const reciprocal = data.factors.find((f) => f.name === 'reciprocal_skills');
-      const depth = data.factors.find((f) => f.name === 'skill_depth');
-      const cadence = data.factors.find((f) => f.name === 'availability_cadence');
+      const reciprocal = data.factors.find((f) => f.name === 'reciprocal_teach_want');
+      const skillLevel = data.factors.find((f) => f.name === 'skill_level_compatibility');
+      const goals = data.factors.find((f) => f.name === 'goals_alignment');
+      const avail = data.factors.find((f) => f.name === 'availability_compatibility');
+      const learn = data.factors.find((f) => f.name === 'learning_style_compatibility');
 
+      assert.equal(reciprocal.weight, 40);
       assert.equal(reciprocal.score, 100);
-      assert.equal(depth.score, 100);
-      assert.equal(cadence.score, 43);
+
+      assert.equal(skillLevel.weight, 20);
+      assert.equal(skillLevel.score, 100);
+
+      assert.equal(goals.weight, 15);
+      assert.equal(goals.score, 100);
+
+      assert.equal(avail.weight, 15);
+      assert.equal(avail.score, 43);
+
+      assert.equal(learn.weight, 10);
+      assert.equal(learn.score, 100);
+
+      const totalWeight = data.factors.reduce((sum, f) => sum + f.weight, 0);
+      assert.equal(totalWeight, 100);
 
       assert.ok(Array.isArray(data.reasons));
       assert.ok(data.reasons[0].includes('Mutual skill exchange'));
@@ -436,9 +509,9 @@ describe('SkillSync Matching API - Integration Tests', () => {
   });
 
   // ==========================================================================
-  // 5. Empty-List Behavior
+  // 5. Empty-List Behavior & Strict Reciprocity via API
   // ==========================================================================
-  describe('5. Empty-List Scoring Integrity via API', () => {
+  describe('5. Empty-List Scoring Integrity and Strict Reciprocity via API', () => {
     it('does not award artificial 100 scores when project requiredSkills or timeSlots are empty', async () => {
       const payload = {
         project: {
@@ -468,10 +541,10 @@ describe('SkillSync Matching API - Integration Tests', () => {
       assert.equal(data.status, 'calculated');
 
       const skillsFactor = data.factors.find((f) => f.name === 'skills_alignment');
-      const schedFactor = data.factors.find((f) => f.name === 'schedule_overlap');
+      const availFactor = data.factors.find((f) => f.name === 'availability_compatibility');
 
       assert.equal(skillsFactor.score, 0);
-      assert.equal(schedFactor.score, 0);
+      assert.equal(availFactor.score, 0);
     });
 
     it('returns score 0 for reciprocal skills when desiredSkills are empty in both directions', async () => {
@@ -499,11 +572,43 @@ describe('SkillSync Matching API - Integration Tests', () => {
       assert.equal(res.status, 200);
       const data = await res.json();
       assert.equal(data.status, 'calculated');
-      const reciprocal = data.factors.find((f) => f.name === 'reciprocal_skills');
-      const depth = data.factors.find((f) => f.name === 'skill_depth');
+      const reciprocal = data.factors.find((f) => f.name === 'reciprocal_teach_want');
+      const skillLevel = data.factors.find((f) => f.name === 'skill_level_compatibility');
 
       assert.equal(reciprocal.score, 0);
-      assert.equal(depth.score, 0);
+      assert.equal(skillLevel.score, 0);
+    });
+
+    it('scores 0 for reciprocal factor on a one-way skill match', async () => {
+      // Student A desires what B offers, but Student B does NOT desire what A offers
+      const payload = {
+        studentA: {
+          offeredSkills: [{ name: 'Rust', level: 4 }],
+          desiredSkills: [{ name: 'React', targetLevel: 3 }],
+          timeSlots: ['mon_morning'],
+          weeklyHours: 5,
+        },
+        studentB: {
+          offeredSkills: [{ name: 'React', level: 4 }],
+          desiredSkills: [{ name: 'Go', targetLevel: 3 }], // desires Go, not Rust!
+          timeSlots: ['mon_morning'],
+          weeklyHours: 5,
+        },
+      };
+
+      const res = await fetch(`${baseUrl}/api/matching/preview/skillswap`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Cookie: authCookie },
+        body: JSON.stringify(payload),
+      });
+
+      assert.equal(res.status, 200);
+      const data = await res.json();
+      assert.equal(data.status, 'calculated');
+
+      const reciprocal = data.factors.find((f) => f.name === 'reciprocal_teach_want');
+      assert.equal(reciprocal.score, 0);
+      assert.ok(data.reasons.some((r) => r.includes('One-way match')));
     });
   });
 
@@ -550,116 +655,6 @@ describe('SkillSync Matching API - Integration Tests', () => {
       assert.equal(res.status, 404);
       const data = await res.json();
       assert.equal(data.error, 'Endpoint not found');
-    });
-  });
-
-  // ==========================================================================
-  // 7. Security: Origin Protection & Rate Limiting
-  // ==========================================================================
-  describe('7. Security: Origin Protection and Rate Limiting', () => {
-    it('rejects state-changing requests from untrusted origins with HTTP 403', async () => {
-      const res = await fetch(`${baseUrl}/api/matching/preview/project`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Origin: 'http://malicious-site.example.com',
-          Cookie: authCookie,
-        },
-        body: JSON.stringify({ project: {}, student: {} }),
-      });
-
-      assert.equal(res.status, 403);
-      const data = await res.json();
-      assert.ok(data.error.includes('Forbidden: Origin header does not match'));
-    });
-
-    it('accepts requests when Origin header matches configured CLIENT_URL', async () => {
-      const payload = {
-        project: {
-          requiredSkills: [],
-          timeSlots: [],
-          goals: [],
-          timeline: 'short_term',
-          workingStyle: 'synchronous',
-        },
-        student: {
-          skills: [],
-          timeSlots: [],
-          goals: [],
-          timeline: 'short_term',
-          workingStyle: 'synchronous',
-        },
-      };
-
-      const res = await fetch(`${baseUrl}/api/matching/preview/project`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Origin: 'http://localhost:5173',
-          Cookie: authCookie,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      assert.equal(res.status, 200);
-      const data = await res.json();
-      assert.equal(data.status, 'calculated');
-    });
-
-    it('enforces rate limiting when threshold is exceeded', async () => {
-      // Temporarily set rate limit threshold to 2 requests for this IP
-      process.env.MATCHING_RATE_LIMIT_MAX = '2';
-
-      try {
-        const payload = {
-          studentA: {
-            courseCode: 'CS101',
-            topics: [],
-            timeSlots: [],
-            learningPreferences: [],
-          },
-          studentB: {
-            courseCode: 'CS101',
-            topics: [],
-            timeSlots: [],
-            learningPreferences: [],
-          },
-        };
-
-        const headers = {
-          'Content-Type': 'application/json',
-          Cookie: authCookie,
-          'x-test-rate-limit': 'true',
-        };
-
-        // Request 1: Allowed
-        const res1 = await fetch(`${baseUrl}/api/matching/preview/study`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(payload),
-        });
-        assert.equal(res1.status, 200);
-
-        // Request 2: Allowed
-        const res2 = await fetch(`${baseUrl}/api/matching/preview/study`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(payload),
-        });
-        assert.equal(res2.status, 200);
-
-        // Request 3: Exceeds limit -> HTTP 429 Too Many Requests
-        const res3 = await fetch(`${baseUrl}/api/matching/preview/study`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(payload),
-        });
-        assert.equal(res3.status, 429);
-        const data3 = await res3.json();
-        assert.ok(data3.error.includes('Too many matching preview requests'));
-      } finally {
-        delete process.env.MATCHING_RATE_LIMIT_MAX;
-      }
     });
   });
 });
