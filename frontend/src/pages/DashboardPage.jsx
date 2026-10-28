@@ -143,14 +143,14 @@ export function DashboardPage({ theme, toggleTheme }) {
           </div>
         </section>
 
-        {/* THREE COLLABORATION WORKFLOWS (Clearly marked as Planned / Phase 4) */}
+        {/* THREE COLLABORATION WORKFLOWS (Preview APIs Implemented · Workspace Integration In Progress) */}
         <section className="space-y-4">
           <div className="flex items-baseline justify-between">
             <h2 className="font-serif text-lg font-medium text-text-main">
               Collaboration Tracks
             </h2>
             <span className="text-xs text-text-muted">
-              Phase 4 Modules (In Development)
+              Matching APIs Implemented · Workspace Integration In Progress
             </span>
           </div>
 
@@ -167,18 +167,18 @@ export function DashboardPage({ theme, toggleTheme }) {
                       Project Teammates
                     </h3>
                     <Badge variant="outline" className="text-[10px]">
-                      Planned
+                      Preview API Available
                     </Badge>
                   </div>
                   <p className="text-xs text-text-muted leading-relaxed">
-                    Match with students on technical skills, schedule symmetry, and balanced workload commitments for academic projects.
+                    Deterministic compatibility scoring engine evaluates technical skills, schedules, and working styles via authenticated preview endpoints. In-dashboard team creation and project matching are in progress.
                   </p>
                 </div>
               </div>
 
               <div className="pt-4 border-t border-border flex items-center justify-between text-xs text-text-muted">
                 <span>Matching Engine</span>
-                <span className="font-medium text-text-amber">Coming in Phase 4</span>
+                <span className="font-medium text-text-amber">Project Persistence Pending</span>
               </div>
             </Card>
 
@@ -194,18 +194,18 @@ export function DashboardPage({ theme, toggleTheme }) {
                       Study Buddies
                     </h3>
                     <Badge variant="outline" className="text-[10px]">
-                      Planned
+                      Preview API Available
                     </Badge>
                   </div>
                   <p className="text-xs text-text-muted leading-relaxed">
-                    Form course-specific homework squads and exam study circles based on current curriculum and weekly study hours.
+                    Curriculum alignment and study cadence scoring are active via backend preview endpoints. Interactive peer discovery and study squad formation within the dashboard are in progress.
                   </p>
                 </div>
               </div>
 
               <div className="pt-4 border-t border-border flex items-center justify-between text-xs text-text-muted">
                 <span>Course Pairing</span>
-                <span className="font-medium text-text-amber">Coming in Phase 4</span>
+                <span className="font-medium text-text-amber">Discovery Integration Pending</span>
               </div>
             </Card>
 
@@ -221,18 +221,18 @@ export function DashboardPage({ theme, toggleTheme }) {
                       SkillSwap
                     </h3>
                     <Badge variant="outline" className="text-[10px]">
-                      Planned
+                      Preview API Available
                     </Badge>
                   </div>
                   <p className="text-xs text-text-muted leading-relaxed">
-                    Peer-to-peer reciprocal tutoring. Offer guidance in subjects you excel in; receive tutoring in areas you want to master.
+                    Reciprocal skill-exchange and availability scoring are available via authenticated preview endpoints. In-dashboard peer directory discovery and exchange coordination are in progress.
                   </p>
                 </div>
               </div>
 
               <div className="pt-4 border-t border-border flex items-center justify-between text-xs text-text-muted">
                 <span>Exchange Directory</span>
-                <span className="font-medium text-text-amber">Coming in Phase 4</span>
+                <span className="font-medium text-text-amber">Discovery Integration Pending</span>
               </div>
             </Card>
           </div>
