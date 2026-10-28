@@ -5,6 +5,7 @@ import Footer from './components/layout/Footer';
 import LandingPage from './pages/LandingPage';
 import Modal from './components/ui/Modal';
 import Button from './components/ui/Button';
+import { scrollToSection } from './utils/scroll';
 
 export function App() {
   const [theme, setTheme] = useState(() => {
@@ -45,10 +46,7 @@ export function App() {
 
   const handleExploreDemoFromModal = () => {
     handleCloseAuth();
-    const demoElement = document.getElementById('demo');
-    if (demoElement) {
-      demoElement.scrollIntoView({ behavior: 'smooth' });
-    }
+    scrollToSection('demo');
   };
 
   return (

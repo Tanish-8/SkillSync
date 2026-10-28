@@ -16,6 +16,7 @@ import { Button } from '../components/ui/Button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui/Card';
 import { ScoreBar } from '../components/ui/ScoreBar';
 import { Badge } from '../components/ui/Badge';
+import { scrollToSection } from '../utils/scroll';
 
 // Coherent, realistic demonstration data for each matching context
 const DEMO_CONTEXTS = {
@@ -129,10 +130,7 @@ export function LandingPage({ onOpenAuth }) {
   };
 
   const handleScrollTo = (id) => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
-    }
+    scrollToSection(id);
   };
 
   return (
@@ -183,7 +181,7 @@ export function LandingPage({ onOpenAuth }) {
       {/* 2. INTERACTIVE PRODUCT DEMONSTRATION */}
       <section
         id="demo"
-        className="max-w-5xl mx-auto px-4 sm:px-6 scroll-mt-24 space-y-8"
+        className="max-w-5xl mx-auto px-4 sm:px-6 scroll-mt-20 space-y-8"
       >
         <div className="border-t border-border pt-12 text-center max-w-2xl mx-auto space-y-3">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-bg-section border border-border text-xs text-text-muted font-sans">
@@ -217,7 +215,7 @@ export function LandingPage({ onOpenAuth }) {
             className={`px-4 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary ${
               activeContext === 'project'
                 ? 'bg-primary text-primary-foreground shadow-restrained'
-                : 'text-text-muted hover:text-text-main hover:bg-bg-card/60'
+                : 'text-text-muted hover:text-text-main hover:bg-bg-card'
             }`}
           >
             Project Collaboration
@@ -233,7 +231,7 @@ export function LandingPage({ onOpenAuth }) {
             className={`px-4 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary ${
               activeContext === 'study'
                 ? 'bg-primary text-primary-foreground shadow-restrained'
-                : 'text-text-muted hover:text-text-main hover:bg-bg-card/60'
+                : 'text-text-muted hover:text-text-main hover:bg-bg-card'
             }`}
           >
             Study Buddies
@@ -249,7 +247,7 @@ export function LandingPage({ onOpenAuth }) {
             className={`px-4 py-2 text-xs sm:text-sm font-medium rounded-md transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary ${
               activeContext === 'skillswap'
                 ? 'bg-primary text-primary-foreground shadow-restrained'
-                : 'text-text-muted hover:text-text-main hover:bg-bg-card/60'
+                : 'text-text-muted hover:text-text-main hover:bg-bg-card'
             }`}
           >
             SkillSwap
@@ -404,7 +402,7 @@ export function LandingPage({ onOpenAuth }) {
       {/* 3. EXPLAIN THE THREE WORKFLOWS */}
       <section
         id="workflows"
-        className="max-w-5xl mx-auto px-4 sm:px-6 scroll-mt-24 space-y-12"
+        className="max-w-5xl mx-auto px-4 sm:px-6 scroll-mt-20 space-y-12"
       >
         <div className="border-t border-border pt-12 text-center max-w-2xl mx-auto space-y-3">
           <Badge variant="neutral">Structured Workflows</Badge>
@@ -419,7 +417,7 @@ export function LandingPage({ onOpenAuth }) {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Mode 1: Project Collaboration */}
-          <Card id="projects" className="flex flex-col justify-between scroll-mt-28">
+          <Card id="projects" className="flex flex-col justify-between scroll-mt-20">
             <CardHeader className="space-y-3">
               <div className="w-10 h-10 rounded-md border border-border bg-bg-section flex items-center justify-center">
                 <FolderGit2 className="w-5 h-5 text-text-main" aria-hidden="true" />
@@ -456,7 +454,7 @@ export function LandingPage({ onOpenAuth }) {
           </Card>
 
           {/* Mode 2: Study-Buddy Matching */}
-          <Card id="study" className="flex flex-col justify-between scroll-mt-28">
+          <Card id="study" className="flex flex-col justify-between scroll-mt-20">
             <CardHeader className="space-y-3">
               <div className="w-10 h-10 rounded-md border border-border bg-bg-section flex items-center justify-center">
                 <BookOpenCheck className="w-5 h-5 text-text-main" aria-hidden="true" />
@@ -493,7 +491,7 @@ export function LandingPage({ onOpenAuth }) {
           </Card>
 
           {/* Mode 3: Reciprocal SkillSwap */}
-          <Card id="skillswap" className="flex flex-col justify-between scroll-mt-28">
+          <Card id="skillswap" className="flex flex-col justify-between scroll-mt-20">
             <CardHeader className="space-y-3">
               <div className="w-10 h-10 rounded-md border border-border bg-bg-section flex items-center justify-center">
                 <ArrowLeftRight className="w-5 h-5 text-text-main" aria-hidden="true" />
@@ -534,7 +532,7 @@ export function LandingPage({ onOpenAuth }) {
       {/* 4. SCORING PHILOSOPHY SECTION */}
       <section
         id="scoring"
-        className="max-w-5xl mx-auto px-4 sm:px-6 scroll-mt-24 space-y-8"
+        className="max-w-5xl mx-auto px-4 sm:px-6 scroll-mt-20 space-y-8"
       >
         <div className="border-t border-border pt-12 text-center max-w-2xl mx-auto space-y-3">
           <Badge variant="neutral">Ethical Architecture</Badge>

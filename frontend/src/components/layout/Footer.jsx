@@ -1,12 +1,10 @@
 import React from 'react';
+import { scrollToSection } from '../../utils/scroll';
 
 export function Footer() {
   const handleScroll = (e, id) => {
     e.preventDefault();
-    const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-    }
+    scrollToSection(id);
   };
 
   return (

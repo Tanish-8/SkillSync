@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Sun, Moon, Menu, X } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { scrollToSection } from '../../utils/scroll';
 
 export function Header({ theme, toggleTheme, onOpenAuth }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -8,14 +9,13 @@ export function Header({ theme, toggleTheme, onOpenAuth }) {
   const handleNavClick = (e, targetId) => {
     e.preventDefault();
     setMobileMenuOpen(false);
-    const element = document.getElementById(targetId);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-    }
+    requestAnimationFrame(() => {
+      scrollToSection(targetId);
+    });
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border bg-bg-page/95 transition-colors">
+    <header className="sticky top-0 z-40 w-full border-b border-border bg-bg-page transition-colors">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         {/* Brand / Logo */}
         <div className="flex items-center gap-3">
@@ -141,7 +141,7 @@ export function Header({ theme, toggleTheme, onOpenAuth }) {
 
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
-        <div className="sm:hidden border-b border-border bg-bg-card px-4 pt-3 pb-5 space-y-3">
+        <div className="sm:hidden border-b border-border bg-bg-page px-4 pt-3 pb-5 space-y-3">
           <nav className="flex flex-col space-y-2 text-sm text-text-muted">
             <a
               href="#projects"
