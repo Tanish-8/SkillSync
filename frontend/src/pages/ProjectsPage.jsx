@@ -4,12 +4,11 @@ import {
   Users,
   Code2,
   Calendar,
-  Layers,
+  Target,
   ArrowRight,
   AlertCircle,
   CheckCircle2,
   Sliders,
-  ExternalLink,
 } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
@@ -137,20 +136,25 @@ export function ProjectsPage() {
             </div>
           </Card>
 
-          {/* Factor 3: Timeline Match (20%) */}
+          {/* Factor 3: Goals & Urgency (20%) */}
           <Card className="p-4 space-y-2.5">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-medium text-text-muted uppercase tracking-wider">
-                Timeline (20%)
+                Goals & Urgency (20%)
               </span>
-              <Layers className="w-3.5 h-3.5 text-accent" />
+              <Target className="w-3.5 h-3.5 text-accent" />
             </div>
             <div className="space-y-1">
               <span className="text-sm font-medium text-text-main block capitalize">
-                {profile?.timeline ? profile.timeline.replace('_', ' ') : 'Not set'}
+                {profile?.timeline ? profile.timeline.replace('_', ' ') : 'Timeline not set'}
               </span>
-              <p className="text-[11px] text-text-muted">
-                Equal timelines receive 100%, flexible receives 75%
+              <p className="text-[11px] text-text-muted line-clamp-2">
+                {profile?.goals && profile.goals.length > 0
+                  ? `Goals: ${profile.goals.map((g) => g.replace(/_/g, ' ')).join(', ')}`
+                  : 'No project goals declared'}
+              </p>
+              <p className="text-[10px] text-text-muted pt-0.5">
+                Combines goal similarity (60% of factor) and timeline compatibility (40%)
               </p>
             </div>
           </Card>
@@ -186,7 +190,7 @@ export function ProjectsPage() {
             Project Persistence Workspace Coming in Phase 5B
           </h2>
           <p className="text-xs text-text-muted leading-relaxed">
-            Project team listings and group applications are not yet persisted in the database. When Phase 5B connects project models, your declared technical skills, schedule, and working style will be used to automatically score compatibility with project openings.
+            Project team listings and group applications are not yet persisted in the database. When Phase 5B connects project models, your declared technical skills, schedule, goals, timeline, and working style will be used to automatically score compatibility with project openings.
           </p>
         </div>
 
