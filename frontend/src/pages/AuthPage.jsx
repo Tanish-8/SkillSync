@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { gsap } from 'gsap';
 import {
   ArrowLeft,
@@ -8,6 +8,7 @@ import {
   Eye,
   EyeOff,
   Info,
+  AlertCircle,
   GraduationCap
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
@@ -17,12 +18,22 @@ import {
   validateRegistrationEmail,
   validateSignInEmail,
 } from '../utils/emailValidation';
+import { useAuth } from '../context/AuthContext';
 
 export function AuthPage({ theme, toggleTheme }) {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { user, login, register } = useAuth();
 
   // Canonical mode from URL query param: 'signin' | 'signup'
   const modeParam = searchParams.get('mode') === 'signup' ? 'signup' : 'signin';
+
+  // If already logged in, redirect to dashboard
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, navigate]);
 
   // Refs for tracking animation and state synchronization
   const currentModeRef = useRef(modeParam);
@@ -42,7 +53,8 @@ export function AuthPage({ theme, toggleTheme }) {
   const [signInPassword, setSignInPassword] = useState('');
   const [showSignInPassword, setShowSignInPassword] = useState(false);
   const [signInErrors, setSignInErrors] = useState({});
-  const [signInFeedback, setSignInFeedback] = useState(null);
+  const [signInServerError, setSignInServerError] = useState(null);
+  const [isSubmittingSignIn, setIsSubmittingSignIn] = useState(false);
 
   // Form States - Sign Up
   const [signUpName, setSignUpName] = useState('');
@@ -50,7 +62,8 @@ export function AuthPage({ theme, toggleTheme }) {
   const [signUpPassword, setSignUpPassword] = useState('');
   const [showSignUpPassword, setShowSignUpPassword] = useState(false);
   const [signUpErrors, setSignUpErrors] = useState({});
-  const [signUpFeedback, setSignUpFeedback] = useState(null);
+  const [signUpServerError, setSignUpServerError] = useState(null);
+  const [isSubmittingSignUp, setIsSubmittingSignUp] = useState(false);
 
   // Polygon coordinates for diagonal blade transition
   // Sign-In: Blade covers the LEFT half (slanted right at top)
@@ -371,13 +384,16 @@ export function AuthPage({ theme, toggleTheme }) {
   const validatePassword = (pass) => {
     if (!pass) return 'Password is required.';
     if (pass.length < 8) return 'Password must be at least 8 characters long.';
+    if (pass.length > 72) return 'Password cannot exceed 72 characters.';
     return null;
   };
 
   // Handle Sign In Submit
-  const handleSignInSubmit = (e) => {
+  const handleSignInSubmit = async (e) => {
     e.preventDefault();
-    setSignInFeedback(null);
+    if (isSubmittingSignIn) return;
+
+    setSignInServerError(null);
     const errors = {};
 
     const emailErr = validateSignInEmail(signInEmail);
@@ -389,23 +405,31 @@ export function AuthPage({ theme, toggleTheme }) {
     setSignInErrors(errors);
 
     if (Object.keys(errors).length === 0) {
-      setSignInFeedback({
-        type: 'info',
-        title: 'Phase 3A Form Validation Passed',
-        message:
-          'Frontend credentials validated. The authentication backend (Express, JWT session cookies, and bcrypt) will be connected in Phase 3B. No account session has been opened.',
-      });
+      try {
+        setIsSubmittingSignIn(true);
+        await login(signInEmail, signInPassword);
+        setSignInPassword('');
+        navigate('/dashboard');
+      } catch (err) {
+        setSignInServerError(err.message || 'Invalid email or password');
+      } finally {
+        setIsSubmittingSignIn(false);
+      }
     }
   };
 
   // Handle Sign Up Submit
-  const handleSignUpSubmit = (e) => {
+  const handleSignUpSubmit = async (e) => {
     e.preventDefault();
-    setSignUpFeedback(null);
+    if (isSubmittingSignUp) return;
+
+    setSignUpServerError(null);
     const errors = {};
 
     if (!signUpName.trim() || signUpName.trim().length < 2) {
       errors.name = 'Full name is required (minimum 2 characters).';
+    } else if (signUpName.trim().length > 70) {
+      errors.name = 'Full name cannot exceed 70 characters.';
     }
 
     const emailErr = validateRegistrationEmail(signUpEmail);
@@ -417,12 +441,20 @@ export function AuthPage({ theme, toggleTheme }) {
     setSignUpErrors(errors);
 
     if (Object.keys(errors).length === 0) {
-      setSignUpFeedback({
-        type: 'info',
-        title: 'Phase 3A Registration Format Validated',
-        message:
-          'Email format and registration fields validated on the client. Database persistence and account creation will be activated when the authentication backend is connected in Phase 3B. No account has been created.',
-      });
+      try {
+        setIsSubmittingSignUp(true);
+        await register(signUpName, signUpEmail, signUpPassword);
+        setSignUpPassword('');
+        navigate('/dashboard');
+      } catch (err) {
+        if (err.status === 409) {
+          setSignUpServerError('An account with this email address already exists.');
+        } else {
+          setSignUpServerError(err.message || 'Failed to create student account.');
+        }
+      } finally {
+        setIsSubmittingSignUp(false);
+      }
     }
   };
 
@@ -501,19 +533,15 @@ export function AuthPage({ theme, toggleTheme }) {
                 </p>
               </div>
 
-              {/* Feedback notice on submit */}
-              {signUpFeedback && (
+              {/* Server error alert on submit */}
+              {signUpServerError && (
                 <div
-                  role="status"
-                  aria-live="polite"
-                  className="rounded-md border border-border bg-bg-section p-3.5 text-xs space-y-1"
+                  role="alert"
+                  className="rounded-md border border-border bg-bg-section p-3.5 text-xs text-text-main flex items-start gap-2"
                 >
-                  <div className="flex items-center gap-1.5 font-medium text-text-main">
-                    <Info className="w-3.5 h-3.5 text-text-amber shrink-0" aria-hidden="true" />
-                    <span>{signUpFeedback.title}</span>
-                  </div>
-                  <p className="text-text-muted leading-relaxed">
-                    {signUpFeedback.message}
+                  <AlertCircle className="w-4 h-4 text-text-amber shrink-0 mt-0.5" aria-hidden="true" />
+                  <p className="text-text-muted leading-relaxed font-medium">
+                    {signUpServerError}
                   </p>
                 </div>
               )}
@@ -524,7 +552,11 @@ export function AuthPage({ theme, toggleTheme }) {
                   label="Full Name"
                   placeholder="e.g. Alex Morgan"
                   value={signUpName}
-                  onChange={(e) => setSignUpName(e.target.value)}
+                  onChange={(e) => {
+                    setSignUpName(e.target.value);
+                    if (signUpServerError) setSignUpServerError(null);
+                    if (signUpErrors.name) setSignUpErrors((prev) => ({ ...prev, name: null }));
+                  }}
                   error={signUpErrors.name}
                   required
                 />
@@ -535,7 +567,11 @@ export function AuthPage({ theme, toggleTheme }) {
                   label="Email Address"
                   placeholder="name@example.com"
                   value={signUpEmail}
-                  onChange={(e) => setSignUpEmail(e.target.value)}
+                  onChange={(e) => {
+                    setSignUpEmail(e.target.value);
+                    if (signUpServerError) setSignUpServerError(null);
+                    if (signUpErrors.email) setSignUpErrors((prev) => ({ ...prev, email: null }));
+                  }}
                   error={signUpErrors.email}
                   hint="Use an email address you can access."
                   required
@@ -547,7 +583,11 @@ export function AuthPage({ theme, toggleTheme }) {
                   label="Password"
                   placeholder="At least 8 characters"
                   value={signUpPassword}
-                  onChange={(e) => setSignUpPassword(e.target.value)}
+                  onChange={(e) => {
+                    setSignUpPassword(e.target.value);
+                    if (signUpServerError) setSignUpServerError(null);
+                    if (signUpErrors.password) setSignUpErrors((prev) => ({ ...prev, password: null }));
+                  }}
                   error={signUpErrors.password}
                   required
                   rightElement={
@@ -572,9 +612,10 @@ export function AuthPage({ theme, toggleTheme }) {
                   type="submit"
                   variant="primary"
                   size="md"
+                  disabled={isSubmittingSignUp}
                   className="w-full mt-2"
                 >
-                  Create Student Account
+                  {isSubmittingSignUp ? 'Creating Profile...' : 'Create Student Account'}
                 </Button>
               </form>
 
@@ -619,19 +660,15 @@ export function AuthPage({ theme, toggleTheme }) {
                 </p>
               </div>
 
-              {/* Feedback notice on submit */}
-              {signInFeedback && (
+              {/* Server error alert on submit */}
+              {signInServerError && (
                 <div
-                  role="status"
-                  aria-live="polite"
-                  className="rounded-md border border-border bg-bg-section p-3.5 text-xs space-y-1"
+                  role="alert"
+                  className="rounded-md border border-border bg-bg-section p-3.5 text-xs text-text-main flex items-start gap-2"
                 >
-                  <div className="flex items-center gap-1.5 font-medium text-text-main">
-                    <Info className="w-3.5 h-3.5 text-text-amber shrink-0" aria-hidden="true" />
-                    <span>{signInFeedback.title}</span>
-                  </div>
-                  <p className="text-text-muted leading-relaxed">
-                    {signInFeedback.message}
+                  <AlertCircle className="w-4 h-4 text-text-amber shrink-0 mt-0.5" aria-hidden="true" />
+                  <p className="text-text-muted leading-relaxed font-medium">
+                    {signInServerError}
                   </p>
                 </div>
               )}
@@ -643,7 +680,11 @@ export function AuthPage({ theme, toggleTheme }) {
                   label="Email Address"
                   placeholder="name@example.com"
                   value={signInEmail}
-                  onChange={(e) => setSignInEmail(e.target.value)}
+                  onChange={(e) => {
+                    setSignInEmail(e.target.value);
+                    if (signInServerError) setSignInServerError(null);
+                    if (signInErrors.email) setSignInErrors((prev) => ({ ...prev, email: null }));
+                  }}
                   error={signInErrors.email}
                   required
                 />
@@ -654,7 +695,11 @@ export function AuthPage({ theme, toggleTheme }) {
                   label="Password"
                   placeholder="••••••••"
                   value={signInPassword}
-                  onChange={(e) => setSignInPassword(e.target.value)}
+                  onChange={(e) => {
+                    setSignInPassword(e.target.value);
+                    if (signInServerError) setSignInServerError(null);
+                    if (signInErrors.password) setSignInErrors((prev) => ({ ...prev, password: null }));
+                  }}
                   error={signInErrors.password}
                   required
                   rightElement={
@@ -679,9 +724,10 @@ export function AuthPage({ theme, toggleTheme }) {
                   type="submit"
                   variant="primary"
                   size="md"
+                  disabled={isSubmittingSignIn}
                   className="w-full mt-2"
                 >
-                  Sign In to SkillSync
+                  {isSubmittingSignIn ? 'Signing In...' : 'Sign In to SkillSync'}
                 </Button>
               </form>
 

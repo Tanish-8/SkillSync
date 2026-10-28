@@ -4,15 +4,20 @@ import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import LandingPage from './pages/LandingPage';
 import AuthPage from './pages/AuthPage';
+import DashboardPage from './pages/DashboardPage';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import { AuthProvider } from './context/AuthContext';
 
 function AppContent({ theme, toggleTheme }) {
   const location = useLocation();
   const isAuthRoute = location.pathname === '/auth';
+  const isDashboardRoute = location.pathname === '/dashboard';
+  const hideLandingShell = isAuthRoute || isDashboardRoute;
 
   return (
     <div className="min-h-screen flex flex-col bg-bg-page text-text-main transition-colors duration-200">
-      {/* Landing page header only shown outside /auth */}
-      {!isAuthRoute && <Header theme={theme} toggleTheme={toggleTheme} />}
+      {/* Landing page header only shown outside /auth and /dashboard */}
+      {!hideLandingShell && <Header theme={theme} toggleTheme={toggleTheme} />}
 
       <div className="flex-1">
         <Routes>
@@ -21,11 +26,19 @@ function AppContent({ theme, toggleTheme }) {
             path="/auth"
             element={<AuthPage theme={theme} toggleTheme={toggleTheme} />}
           />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <DashboardPage theme={theme} toggleTheme={toggleTheme} />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
       </div>
 
-      {/* Landing page footer only shown outside /auth */}
-      {!isAuthRoute && <Footer />}
+      {/* Landing page footer only shown outside /auth and /dashboard */}
+      {!hideLandingShell && <Footer />}
     </div>
   );
 }
@@ -56,7 +69,9 @@ export function App() {
 
   return (
     <Router>
-      <AppContent theme={theme} toggleTheme={toggleTheme} />
+      <AuthProvider>
+        <AppContent theme={theme} toggleTheme={toggleTheme} />
+      </AuthProvider>
     </Router>
   );
 }

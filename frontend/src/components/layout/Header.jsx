@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sun, Moon, Menu, X } from 'lucide-react';
+import { Sun, Moon, Menu, X, LayoutDashboard } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { scrollToSection } from '../../utils/scroll';
+import { useAuth } from '../../context/AuthContext';
 
 export function Header({ theme, toggleTheme }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const handleNavClick = (e, targetId) => {
     e.preventDefault();
@@ -78,7 +80,7 @@ export function Header({ theme, toggleTheme }) {
           </a>
         </nav>
 
-        {/* Actions: Theme Toggle, Sign In, and Get Started */}
+        {/* Actions: Theme Toggle, Sign In, and Get Started (or Dashboard if logged in) */}
         <div className="hidden sm:flex items-center gap-3">
           <button
             type="button"
@@ -93,21 +95,35 @@ export function Header({ theme, toggleTheme }) {
             )}
           </button>
 
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => navigate('/auth?mode=signin')}
-          >
-            Sign in
-          </Button>
+          {user ? (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => navigate('/dashboard')}
+              className="flex items-center gap-1.5"
+            >
+              <LayoutDashboard className="w-3.5 h-3.5" aria-hidden="true" />
+              <span>Dashboard</span>
+            </Button>
+          ) : (
+            <>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => navigate('/auth?mode=signin')}
+              >
+                Sign in
+              </Button>
 
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => navigate('/auth?mode=signup')}
-          >
-            Get started
-          </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => navigate('/auth?mode=signup')}
+              >
+                Get started
+              </Button>
+            </>
+          )}
         </div>
 
         {/* Mobile Hamburger Button */}
@@ -182,28 +198,45 @@ export function Header({ theme, toggleTheme }) {
             </a>
           </nav>
           <div className="pt-3 border-t border-border flex flex-col gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              className="w-full"
-              onClick={() => {
-                setMobileMenuOpen(false);
-                navigate('/auth?mode=signin');
-              }}
-            >
-              Sign in
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              className="w-full"
-              onClick={() => {
-                setMobileMenuOpen(false);
-                navigate('/auth?mode=signup');
-              }}
-            >
-              Get started
-            </Button>
+            {user ? (
+              <Button
+                variant="primary"
+                size="sm"
+                className="w-full flex items-center justify-center gap-1.5"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  navigate('/dashboard');
+                }}
+              >
+                <LayoutDashboard className="w-3.5 h-3.5" aria-hidden="true" />
+                <span>Go to Dashboard</span>
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    navigate('/auth?mode=signin');
+                  }}
+                >
+                  Sign in
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    navigate('/auth?mode=signup');
+                  }}
+                >
+                  Get started
+                </Button>
+              </>
+            )}
           </div>
         </div>
       )}
