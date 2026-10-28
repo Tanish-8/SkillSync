@@ -1,42 +1,65 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Users,
   BookOpen,
   ArrowLeftRight,
-  LogOut,
-  Sun,
-  Moon,
+  User,
   ShieldCheck,
   Calendar,
+  CheckCircle2,
   AlertCircle,
-  ExternalLink,
+  ArrowRight,
+  Sparkles,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
+import { getProfile } from '../api/client';
 
-export function DashboardPage({ theme, toggleTheme }) {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-  const [logoutLoading, setLogoutLoading] = useState(false);
-  const [logoutError, setLogoutError] = useState(null);
+export function DashboardPage() {
+  const { user } = useAuth();
+  const [profileData, setProfileData] = useState(null);
+  const [completeness, setCompleteness] = useState(null);
+  const [isNewProfile, setIsNewProfile] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [profileError, setProfileError] = useState(null);
 
-  const handleLogout = async () => {
-    try {
-      setLogoutLoading(true);
-      setLogoutError(null);
-      await logout();
-      navigate('/', { replace: true });
-    } catch (err) {
-      setLogoutError(
-        err.message || 'Logout encountered a network error. Session may still be active on server.'
-      );
-    } finally {
-      setLogoutLoading(false);
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadStudentProfile() {
+      try {
+        setLoadingProfile(true);
+        setProfileError(null);
+        const res = await getProfile();
+        if (isMounted) {
+          setProfileData(res.profile);
+          setCompleteness(res.completeness);
+          setIsNewProfile(false);
+        }
+      } catch (err) {
+        if (!isMounted) return;
+        if (err.status === 404) {
+          // New student profile not yet created
+          setIsNewProfile(true);
+          setProfileData(null);
+          setCompleteness(null);
+        } else {
+          setProfileError(err.message || 'Unable to load profile completeness.');
+        }
+      } finally {
+        if (isMounted) setLoadingProfile(false);
+      }
     }
-  };
+
+    loadStudentProfile();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const formattedDate = user?.createdAt
     ? new Date(user.createdAt).toLocaleDateString('en-US', {
@@ -47,218 +70,321 @@ export function DashboardPage({ theme, toggleTheme }) {
     : 'Active Session';
 
   return (
-    <div className="min-h-screen bg-bg-page text-text-main flex flex-col justify-between transition-colors duration-200">
-      {/* 1. DASHBOARD TOP NAVIGATION BAR */}
-      <header className="sticky top-0 z-30 w-full border-b border-border bg-bg-page transition-colors">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          {/* Wordmark */}
-          <Link
-            to="/"
-            className="flex items-baseline gap-1 focus:outline-none focus:ring-1 focus:ring-primary rounded"
-          >
-            <span className="font-serif text-2xl font-semibold tracking-tight text-text-main">
-              SkillSync
-            </span>
-            <span className="w-1.5 h-1.5 rounded-full bg-accent inline-block" />
-          </Link>
-
-          {/* Right Action Bar */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* Theme Toggle */}
-            <button
-              type="button"
-              onClick={toggleTheme}
-              aria-label={
-                theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'
-              }
-              className="p-2 rounded-md border border-border bg-bg-card text-text-main hover:bg-bg-section transition-colors focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
-            >
-              {theme === 'dark' ? (
-                <Sun className="w-4 h-4" aria-hidden="true" />
-              ) : (
-                <Moon className="w-4 h-4" aria-hidden="true" />
-              )}
-            </button>
-
-            {/* Logout Button */}
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handleLogout}
-              disabled={logoutLoading}
-              className="flex items-center gap-1.5"
-            >
-              <LogOut className="w-3.5 h-3.5" aria-hidden="true" />
-              <span>{logoutLoading ? 'Signing out...' : 'Sign out'}</span>
-            </Button>
+    <div className="space-y-8">
+      {/* 1. HERO / STUDENT PROFILE HEADER */}
+      <section className="rounded-lg border border-border bg-bg-card p-6 sm:p-8 space-y-4 shadow-restrained transition-colors">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-medium uppercase tracking-wider text-text-amber">
+                Student Workspace
+              </span>
+              <Badge variant="outline" className="text-[10px] py-0.5 px-2">
+                Authenticated
+              </Badge>
+            </div>
+            <h1 className="font-serif text-2xl sm:text-3xl font-medium tracking-tight text-text-main">
+              Welcome back, {user?.name || 'Student'}
+            </h1>
+            <p className="text-xs text-text-muted">
+              Signed in as <span className="font-medium text-text-main">{user?.email}</span>
+            </p>
           </div>
-        </div>
-      </header>
 
-      {/* 2. MAIN DASHBOARD CONTENT */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-8">
-        {/* Error notification if logout fails */}
-        {logoutError && (
-          <div
-            role="alert"
-            className="rounded-md border border-border bg-bg-section p-4 text-xs text-text-main flex items-start gap-2.5"
-          >
-            <AlertCircle className="w-4 h-4 text-text-amber shrink-0 mt-0.5" />
-            <div className="space-y-1">
-              <span className="font-medium">Logout Notice</span>
-              <p className="text-text-muted leading-relaxed">{logoutError}</p>
+          <div className="flex items-center gap-3 text-xs text-text-muted border-t sm:border-t-0 sm:border-l border-border pt-3 sm:pt-0 sm:pl-6">
+            <Calendar className="w-4 h-4 text-text-muted shrink-0" aria-hidden="true" />
+            <div>
+              <span className="block text-[10px] uppercase tracking-wider text-text-muted">
+                Member Since
+              </span>
+              <span className="font-medium text-text-main">{formattedDate}</span>
             </div>
           </div>
-        )}
+        </div>
+      </section>
 
-        {/* HERO / STUDENT PROFILE HEADER */}
-        <section className="rounded-lg border border-border bg-bg-card p-6 sm:p-8 space-y-4 shadow-restrained transition-colors">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-medium uppercase tracking-wider text-text-amber">
-                  Student Workspace
-                </span>
-                <Badge variant="outline" className="text-[10px] py-0.5 px-2">
-                  Authenticated
-                </Badge>
+      {/* 2. PROFILE COMPLETENESS BY MODE (Deterministic, No Global Artificial Score) */}
+      <section className="space-y-3">
+        <div className="flex items-baseline justify-between">
+          <h2 className="font-serif text-lg font-medium text-text-main">
+            Mode Readiness & Completeness
+          </h2>
+          <Link
+            to="/profile"
+            className="text-xs text-text-amber hover:underline font-medium inline-flex items-center gap-1"
+          >
+            <span>Edit Profile</span>
+            <ArrowRight className="w-3 h-3" aria-hidden="true" />
+          </Link>
+        </div>
+
+        {loadingProfile ? (
+          <div className="rounded-lg border border-border bg-bg-card p-6 text-xs text-text-muted text-center animate-pulse">
+            Checking profile completeness across collaboration modes...
+          </div>
+        ) : profileError ? (
+          <div className="rounded-lg border border-border bg-bg-section p-4 text-xs text-text-main flex items-start gap-2.5">
+            <AlertCircle className="w-4 h-4 text-text-amber shrink-0 mt-0.5" />
+            <div>
+              <span className="font-medium">Profile completeness notice:</span>
+              <p className="text-text-muted mt-0.5">{profileError}</p>
+            </div>
+          </div>
+        ) : isNewProfile ? (
+          <div className="rounded-lg border border-border bg-bg-card p-6 space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-md bg-bg-section border border-border flex items-center justify-center text-text-amber shrink-0">
+                <Sparkles className="w-4 h-4" />
               </div>
-              <h1 className="font-serif text-2xl sm:text-3xl font-medium tracking-tight text-text-main">
-                Welcome back, {user?.name || 'Student'}
-              </h1>
-              <p className="text-xs text-text-muted">
-                Signed in as <span className="font-medium text-text-main">{user?.email}</span>
+              <div className="space-y-1">
+                <h3 className="font-serif text-base font-medium text-text-main">
+                  Profile Setup Needed for Compatibility Matching
+                </h3>
+                <p className="text-xs text-text-muted leading-relaxed max-w-2xl">
+                  You have not created a student profile yet. The SkillSync matching engine requires declared skills, schedules, and learning preferences to calculate compatibility without guessing.
+                </p>
+              </div>
+            </div>
+            <div className="pt-2">
+              <Button size="sm" asChild>
+                <Link to="/profile" className="inline-flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5" />
+                  <span>Configure Student Profile</span>
+                </Link>
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Project Mode Completeness */}
+            <div className="rounded-lg border border-border bg-bg-card p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-text-main">Project Mode</span>
+                {completeness?.project?.isComplete ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Complete</span>
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-medium text-text-amber">
+                    Incomplete
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-text-muted leading-relaxed">
+                {completeness?.project?.isComplete
+                  ? 'All 5 required project inputs declared (skills, timeSlots, goals, timeline, workingStyle).'
+                  : `Missing: ${completeness?.project?.missingFields?.join(', ') || 'required fields'}`}
               </p>
             </div>
 
-            <div className="flex items-center gap-3 text-xs text-text-muted border-t sm:border-t-0 sm:border-l border-border pt-3 sm:pt-0 sm:pl-6">
-              <Calendar className="w-4 h-4 text-text-muted shrink-0" aria-hidden="true" />
-              <div>
-                <span className="block text-[10px] uppercase tracking-wider text-text-muted">
-                  Member Since
-                </span>
-                <span className="font-medium text-text-main">{formattedDate}</span>
+            {/* Study Mode Completeness */}
+            <div className="rounded-lg border border-border bg-bg-card p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-text-main">Study Squads</span>
+                {completeness?.study?.isComplete ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Complete</span>
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-medium text-text-amber">
+                    Incomplete
+                  </span>
+                )}
               </div>
+              <p className="text-[11px] text-text-muted leading-relaxed">
+                {completeness?.study?.isComplete
+                  ? 'All 4 study inputs declared (courseCode, topics, timeSlots, learningPreferences).'
+                  : `Missing: ${completeness?.study?.missingFields?.join(', ') || 'required fields'}`}
+              </p>
+            </div>
+
+            {/* SkillSwap Mode Completeness */}
+            <div className="rounded-lg border border-border bg-bg-card p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-text-main">SkillSwap</span>
+                {completeness?.skillswap?.isComplete ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Complete</span>
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-medium text-text-amber">
+                    Incomplete
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-text-muted leading-relaxed">
+                {completeness?.skillswap?.isComplete
+                  ? 'All 4 SkillSwap inputs declared (offered skills, desiredSkills, timeSlots, weeklyHours).'
+                  : `Missing: ${completeness?.skillswap?.missingFields?.join(', ') || 'required fields'}`}
+              </p>
             </div>
           </div>
-        </section>
+        )}
+      </section>
 
-        {/* THREE COLLABORATION WORKFLOWS (Preview APIs Implemented · Workspace Integration In Progress) */}
-        <section className="space-y-4">
-          <div className="flex items-baseline justify-between">
-            <h2 className="font-serif text-lg font-medium text-text-main">
-              Collaboration Tracks
-            </h2>
-            <span className="text-xs text-text-muted">
-              Matching APIs Implemented · Workspace Integration In Progress
-            </span>
-          </div>
+      {/* 3. FOUR WORKSPACE NAVIGATION CARDS */}
+      <section className="space-y-4">
+        <div className="flex items-baseline justify-between">
+          <h2 className="font-serif text-lg font-medium text-text-main">
+            Collaboration Tracks
+          </h2>
+          <span className="text-xs text-text-muted">
+            Matching APIs Implemented · Workspace Integration In Progress
+          </span>
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* 1. Capstone & Project Collaboration */}
-            <Card className="flex flex-col justify-between p-6 space-y-6">
-              <div className="space-y-4">
-                <div className="w-10 h-10 rounded-md border border-border bg-bg-section flex items-center justify-center text-primary dark:text-accent">
-                  <Users className="w-5 h-5" aria-hidden="true" />
-                </div>
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-serif text-lg font-medium text-text-main">
-                      Project Teammates
-                    </h3>
-                    <Badge variant="outline" className="text-[10px]">
-                      Preview API Available
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-text-muted leading-relaxed">
-                    Deterministic compatibility scoring engine evaluates technical skills, schedules, and working styles via authenticated preview endpoints. In-dashboard team creation and project matching are in progress.
-                  </p>
-                </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {/* Card 1: My Profile */}
+          <Card className="flex flex-col justify-between p-5 space-y-5">
+            <div className="space-y-3.5">
+              <div className="w-9 h-9 rounded-md border border-border bg-bg-section flex items-center justify-center text-primary dark:text-accent">
+                <User className="w-4 h-4" aria-hidden="true" />
               </div>
-
-              <div className="pt-4 border-t border-border flex items-center justify-between text-xs text-text-muted">
-                <span>Matching Engine</span>
-                <span className="font-medium text-text-amber">Project Persistence Pending</span>
-              </div>
-            </Card>
-
-            {/* 2. Course Study Buddies */}
-            <Card className="flex flex-col justify-between p-6 space-y-6">
-              <div className="space-y-4">
-                <div className="w-10 h-10 rounded-md border border-border bg-bg-section flex items-center justify-center text-primary dark:text-accent">
-                  <BookOpen className="w-5 h-5" aria-hidden="true" />
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-serif text-base font-medium text-text-main">
+                    My Profile
+                  </h3>
+                  <Badge variant="outline" className="text-[10px]">
+                    {isNewProfile ? 'Setup Needed' : 'Configured'}
+                  </Badge>
                 </div>
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-serif text-lg font-medium text-text-main">
-                      Study Buddies
-                    </h3>
-                    <Badge variant="outline" className="text-[10px]">
-                      Preview API Available
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-text-muted leading-relaxed">
-                    Curriculum alignment and study cadence scoring are active via backend preview endpoints. Interactive peer discovery and study squad formation within the dashboard are in progress.
-                  </p>
+                <p className="text-xs text-text-muted leading-relaxed">
+                  Manage your technical skills, weekly study cadence, curriculum details, and reciprocal tutoring preferences.
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-border flex items-center justify-between text-xs">
+              <span className="text-text-muted">Student Data</span>
+              <Link
+                to="/profile"
+                className="font-medium text-text-main hover:text-text-amber transition-colors inline-flex items-center gap-1"
+              >
+                <span>Edit Profile</span>
+                <ArrowRight className="w-3 h-3" />
+              </Link>
+            </div>
+          </Card>
+
+          {/* Card 2: Project Teammates */}
+          <Card className="flex flex-col justify-between p-5 space-y-5">
+            <div className="space-y-3.5">
+              <div className="w-9 h-9 rounded-md border border-border bg-bg-section flex items-center justify-center text-primary dark:text-accent">
+                <Users className="w-4 h-4" aria-hidden="true" />
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-serif text-base font-medium text-text-main">
+                    Project Teammates
+                  </h3>
+                  <Badge variant="outline" className="text-[10px]">
+                    Preview API Available
+                  </Badge>
                 </div>
+                <p className="text-xs text-text-muted leading-relaxed">
+                  Deterministic compatibility scoring engine evaluates technical skills, schedules, and working styles via authenticated preview endpoints. In-dashboard team creation and project matching are in progress.
+                </p>
               </div>
+            </div>
 
-              <div className="pt-4 border-t border-border flex items-center justify-between text-xs text-text-muted">
-                <span>Course Pairing</span>
-                <span className="font-medium text-text-amber">Discovery Integration Pending</span>
+            <div className="pt-3 border-t border-border flex items-center justify-between text-xs">
+              <span className="text-text-amber font-medium">Project Persistence Pending</span>
+              <Link
+                to="/projects"
+                className="font-medium text-text-main hover:text-text-amber transition-colors inline-flex items-center gap-1"
+              >
+                <span>View Track</span>
+                <ArrowRight className="w-3 h-3" />
+              </Link>
+            </div>
+          </Card>
+
+          {/* Card 3: Study Buddies */}
+          <Card className="flex flex-col justify-between p-5 space-y-5">
+            <div className="space-y-3.5">
+              <div className="w-9 h-9 rounded-md border border-border bg-bg-section flex items-center justify-center text-primary dark:text-accent">
+                <BookOpen className="w-4 h-4" aria-hidden="true" />
               </div>
-            </Card>
-
-            {/* 3. SkillSwap */}
-            <Card className="flex flex-col justify-between p-6 space-y-6">
-              <div className="space-y-4">
-                <div className="w-10 h-10 rounded-md border border-border bg-bg-section flex items-center justify-center text-primary dark:text-accent">
-                  <ArrowLeftRight className="w-5 h-5" aria-hidden="true" />
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-serif text-base font-medium text-text-main">
+                    Study Buddies
+                  </h3>
+                  <Badge variant="outline" className="text-[10px]">
+                    Preview API Available
+                  </Badge>
                 </div>
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-serif text-lg font-medium text-text-main">
-                      SkillSwap
-                    </h3>
-                    <Badge variant="outline" className="text-[10px]">
-                      Preview API Available
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-text-muted leading-relaxed">
-                    Reciprocal skill-exchange and availability scoring are available via authenticated preview endpoints. In-dashboard peer directory discovery and exchange coordination are in progress.
-                  </p>
+                <p className="text-xs text-text-muted leading-relaxed">
+                  Curriculum alignment and study cadence scoring are active via backend preview endpoints. Interactive peer discovery and study squad formation within the dashboard are in progress.
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-border flex items-center justify-between text-xs">
+              <span className="text-text-amber font-medium">Discovery Integration Pending</span>
+              <Link
+                to="/study-buddies"
+                className="font-medium text-text-main hover:text-text-amber transition-colors inline-flex items-center gap-1"
+              >
+                <span>View Track</span>
+                <ArrowRight className="w-3 h-3" />
+              </Link>
+            </div>
+          </Card>
+
+          {/* Card 4: SkillSwap */}
+          <Card className="flex flex-col justify-between p-5 space-y-5">
+            <div className="space-y-3.5">
+              <div className="w-9 h-9 rounded-md border border-border bg-bg-section flex items-center justify-center text-primary dark:text-accent">
+                <ArrowLeftRight className="w-4 h-4" aria-hidden="true" />
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-serif text-base font-medium text-text-main">
+                    SkillSwap
+                  </h3>
+                  <Badge variant="outline" className="text-[10px]">
+                    Preview API Available
+                  </Badge>
                 </div>
+                <p className="text-xs text-text-muted leading-relaxed">
+                  Reciprocal skill-exchange and availability scoring are available via authenticated preview endpoints. In-dashboard peer directory discovery and exchange coordination are in progress.
+                </p>
               </div>
+            </div>
 
-              <div className="pt-4 border-t border-border flex items-center justify-between text-xs text-text-muted">
-                <span>Exchange Directory</span>
-                <span className="font-medium text-text-amber">Discovery Integration Pending</span>
-              </div>
-            </Card>
-          </div>
-        </section>
+            <div className="pt-3 border-t border-border flex items-center justify-between text-xs">
+              <span className="text-text-amber font-medium">Discovery Integration Pending</span>
+              <Link
+                to="/skillswap"
+                className="font-medium text-text-main hover:text-text-amber transition-colors inline-flex items-center gap-1"
+              >
+                <span>View Track</span>
+                <ArrowRight className="w-3 h-3" />
+              </Link>
+            </div>
+          </Card>
+        </div>
+      </section>
 
-        {/* SECURITY & SESSION VERIFICATION PANEL */}
-        <section className="rounded-lg border border-border bg-bg-section p-6 space-y-3">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-accent" aria-hidden="true" />
-            <h3 className="font-serif text-sm font-medium text-text-main">
-              Session & Cookie Security
-            </h3>
-          </div>
-          <p className="text-xs text-text-muted leading-relaxed max-w-3xl">
-            Your session is secured with an HTTP-only, SameSite=Lax signed JSON Web Token issued directly by the SkillSync backend. JavaScript code running in the browser cannot read or extract this session token.
-          </p>
-        </section>
-      </main>
-
-      {/* 3. MINIMAL DASHBOARD FOOTER */}
-      <footer className="w-full border-t border-border bg-bg-page py-6 text-center text-xs text-text-muted">
-        <span>SkillSync © 2026. Higher Education Student Collaboration Platform.</span>
-      </footer>
+      {/* 4. SECURITY & SESSION VERIFICATION PANEL */}
+      <section className="rounded-lg border border-border bg-bg-section p-6 space-y-3">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4 text-accent" aria-hidden="true" />
+          <h3 className="font-serif text-sm font-medium text-text-main">
+            Session & Cookie Security
+          </h3>
+        </div>
+        <p className="text-xs text-text-muted leading-relaxed max-w-3xl">
+          Your session is secured with an HTTP-only, SameSite=Lax signed JSON Web Token issued directly by the SkillSync backend. JavaScript code running in the browser cannot read or extract this session token.
+        </p>
+      </section>
     </div>
   );
 }
 
 export default DashboardPage;
-

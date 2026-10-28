@@ -2,43 +2,56 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
+import WorkspaceLayout from './components/layout/WorkspaceLayout';
 import LandingPage from './pages/LandingPage';
 import AuthPage from './pages/AuthPage';
 import DashboardPage from './pages/DashboardPage';
+import ProfilePage from './pages/ProfilePage';
+import ProjectsPage from './pages/ProjectsPage';
+import StudyBuddiesPage from './pages/StudyBuddiesPage';
+import SkillSwapPage from './pages/SkillSwapPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 
 function AppContent({ theme, toggleTheme }) {
   const location = useLocation();
-  const isAuthRoute = location.pathname === '/auth';
-  const isDashboardRoute = location.pathname === '/dashboard';
-  const hideLandingShell = isAuthRoute || isDashboardRoute;
+  const isLandingRoute = location.pathname === '/';
 
   return (
     <div className="min-h-screen flex flex-col bg-bg-page text-text-main transition-colors duration-200">
-      {/* Landing page header only shown outside /auth and /dashboard */}
-      {!hideLandingShell && <Header theme={theme} toggleTheme={toggleTheme} />}
+      {/* Landing page header only shown on the public landing page */}
+      {isLandingRoute && <Header theme={theme} toggleTheme={toggleTheme} />}
 
-      <div className="flex-1">
+      <div className="flex-1 flex flex-col">
         <Routes>
+          {/* Public Landing Page */}
           <Route path="/" element={<LandingPage />} />
+
+          {/* Authentication Page */}
           <Route
             path="/auth"
             element={<AuthPage theme={theme} toggleTheme={toggleTheme} />}
           />
+
+          {/* Protected Workspace Layout & Nested Routes */}
           <Route
-            path="/dashboard"
             element={
               <ProtectedRoute>
-                <DashboardPage theme={theme} toggleTheme={toggleTheme} />
+                <WorkspaceLayout theme={theme} toggleTheme={toggleTheme} />
               </ProtectedRoute>
             }
-          />
+          >
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/projects" element={<ProjectsPage />} />
+            <Route path="/study-buddies" element={<StudyBuddiesPage />} />
+            <Route path="/skillswap" element={<SkillSwapPage />} />
+          </Route>
         </Routes>
       </div>
 
-      {/* Landing page footer only shown outside /auth and /dashboard */}
-      {!hideLandingShell && <Footer />}
+      {/* Landing page footer only shown on the public landing page */}
+      {isLandingRoute && <Footer />}
     </div>
   );
 }

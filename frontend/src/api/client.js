@@ -134,3 +134,28 @@ export async function checkHealth() {
   });
 }
 
+/**
+ * Retrieve the currently authenticated student's profile and mode completeness.
+ * Throws an error with status 404 if the user has not yet created a profile.
+ *
+ * @returns {Promise<{ profile: Object, completeness: Object }>}
+ */
+export async function getProfile() {
+  return request('/profile/me', {
+    method: 'GET',
+  });
+}
+
+/**
+ * Create or update the authenticated student's profile.
+ * Strictly sends supported profile schema fields with HTTP-only session credentials.
+ *
+ * @param {Object} profileData
+ * @returns {Promise<{ profile: Object, completeness: Object }>}
+ */
+export async function updateProfile(profileData) {
+  return request('/profile/me', {
+    method: 'PUT',
+    body: JSON.stringify(profileData),
+  });
+}
