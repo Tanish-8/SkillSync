@@ -6,6 +6,7 @@ import healthRoutes from './routes/health.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import matchingRoutes from './routes/matching.routes.js';
 import profileRoutes from './routes/profile.routes.js';
+import projectRoutes from './routes/project.routes.js';
 import { checkOrigin } from './middleware/origin.middleware.js';
 import { errorHandler } from './middleware/error.middleware.js';
 
@@ -36,6 +37,7 @@ app.use('/api', healthRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/matching', matchingRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/projects', projectRoutes);
 
 // 6. Fallback 404 handler for undefined API routes
 app.use('/api/*', (req, res) => {
