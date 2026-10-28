@@ -159,3 +159,86 @@ export async function updateProfile(profileData) {
     body: JSON.stringify(profileData),
   });
 }
+
+/**
+ * Create a new student project.
+ *
+ * @param {Object} projectData
+ * @returns {Promise<{ project: Object }>}
+ */
+export async function createProject(projectData) {
+  return request('/projects', {
+    method: 'POST',
+    body: JSON.stringify(projectData),
+  });
+}
+
+/**
+ * Retrieve open projects with pagination.
+ *
+ * @param {{ page?: number, limit?: number }} [options]
+ * @returns {Promise<{ projects: Array<Object>, pagination: { page: number, limit: number, totalProjects: number, totalPages: number, hasMore: boolean } }>}
+ */
+export async function getProjects({ page, limit } = {}) {
+  const params = new URLSearchParams();
+  if (page !== undefined && page !== null) params.append('page', String(page));
+  if (limit !== undefined && limit !== null) params.append('limit', String(limit));
+  const query = params.toString() ? `?${params.toString()}` : '';
+  return request(`/projects${query}`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * Retrieve projects owned by the currently authenticated user with pagination.
+ *
+ * @param {{ page?: number, limit?: number }} [options]
+ * @returns {Promise<{ projects: Array<Object>, pagination: { page: number, limit: number, totalProjects: number, totalPages: number, hasMore: boolean } }>}
+ */
+export async function getMyProjects({ page, limit } = {}) {
+  const params = new URLSearchParams();
+  if (page !== undefined && page !== null) params.append('page', String(page));
+  if (limit !== undefined && limit !== null) params.append('limit', String(limit));
+  const query = params.toString() ? `?${params.toString()}` : '';
+  return request(`/projects/mine${query}`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * Retrieve single project details by MongoDB ObjectId.
+ *
+ * @param {string} projectId
+ * @returns {Promise<{ project: Object }>}
+ */
+export async function getProject(projectId) {
+  return request(`/projects/${projectId}`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * Update project fields (owner only).
+ *
+ * @param {string} projectId
+ * @param {Object} projectData
+ * @returns {Promise<{ project: Object }>}
+ */
+export async function updateProject(projectId, projectData) {
+  return request(`/projects/${projectId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(projectData),
+  });
+}
+
+/**
+ * Delete a project (owner only).
+ *
+ * @param {string} projectId
+ * @returns {Promise<{ message: string }>}
+ */
+export async function deleteProject(projectId) {
+  return request(`/projects/${projectId}`, {
+    method: 'DELETE',
+  });
+}

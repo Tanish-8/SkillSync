@@ -4,6 +4,7 @@ import http from 'node:http';
 import mongoose from 'mongoose';
 import app from '../../src/app.js';
 import User from '../../src/models/User.js';
+import Project from '../../src/models/Project.js';
 import { connectDB, closeDB } from '../../src/config/db.js';
 
 describe('Frontend API Client & Auth Integration Tests', () => {
@@ -19,6 +20,7 @@ describe('Frontend API Client & Auth Integration Tests', () => {
 
     await connectDB(TEST_DB_URI);
     await User.deleteMany({});
+    await Project.deleteMany({});
 
     server = http.createServer(app);
     await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -29,6 +31,7 @@ describe('Frontend API Client & Auth Integration Tests', () => {
   after(async () => {
     if (mongoose.connection.readyState === 1) {
       await User.deleteMany({});
+      await Project.deleteMany({});
       await closeDB();
     }
     if (server) {
@@ -161,6 +164,125 @@ describe('Frontend API Client & Auth Integration Tests', () => {
       },
     });
     assert.equal(meRes.status, 401);
+  });
+
+  let projectCookie = null;
+  let testProjectId = null;
+
+  it('7. createProject: creates project with required fields and returns 201', async () => {
+    // Re-authenticate Samantha
+    const loginRes = await fetch(`${clientApiUrl}/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Origin: 'http://localhost:5173',
+      },
+      body: JSON.stringify({
+        email: 'samantha@gmail.com',
+        password: 'ValidPassword123!',
+      }),
+    });
+    assert.equal(loginRes.status, 200);
+    projectCookie = loginRes.headers.get('set-cookie').split(';')[0];
+
+    const res = await fetch(`${clientApiUrl}/projects`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: projectCookie,
+      },
+      body: JSON.stringify({
+        title: 'Distributed Consensus Lab',
+        description:
+          'Building Raft and Paxos simulation sandboxes in Go and TypeScript with web visualizers.',
+        requiredSkills: [
+          { name: 'Go', minLevel: 4 },
+          { name: 'TypeScript', minLevel: 3 },
+        ],
+        timeSlots: ['mon_morning', 'wed_afternoon'],
+        goals: ['research', 'portfolio'],
+        timeline: 'Spring 2026',
+        workingStyle: 'mixed',
+      }),
+    });
+
+    assert.equal(res.status, 201);
+    const data = await res.json();
+    assert.ok(data.project);
+    assert.equal(data.project.title, 'Distributed Consensus Lab');
+    assert.equal(data.project.status, 'open');
+    testProjectId = data.project.id;
+  });
+
+  it('8. getProjects & getMyProjects: returns open projects and caller projects with pagination', async () => {
+    // Open projects
+    const openRes = await fetch(`${clientApiUrl}/projects?page=1&limit=10`, {
+      method: 'GET',
+      headers: { Cookie: projectCookie },
+    });
+    assert.equal(openRes.status, 200);
+    const openData = await openRes.json();
+    assert.ok(Array.isArray(openData.projects));
+    assert.ok(openData.pagination);
+    assert.equal(openData.pagination.totalProjects, 1);
+    assert.equal(openData.projects[0].id, testProjectId);
+
+    // My projects
+    const myRes = await fetch(`${clientApiUrl}/projects/mine?page=1&limit=10`, {
+      method: 'GET',
+      headers: { Cookie: projectCookie },
+    });
+    assert.equal(myRes.status, 200);
+    const myData = await myRes.json();
+    assert.ok(Array.isArray(myData.projects));
+    assert.equal(myData.pagination.totalProjects, 1);
+    assert.equal(myData.projects[0].id, testProjectId);
+  });
+
+  it('9. getProject: retrieves single project details by ID', async () => {
+    const res = await fetch(`${clientApiUrl}/projects/${testProjectId}`, {
+      method: 'GET',
+      headers: { Cookie: projectCookie },
+    });
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.equal(data.project.id, testProjectId);
+    assert.equal(data.project.title, 'Distributed Consensus Lab');
+  });
+
+  it('10. updateProject: updates project fields and status via PATCH', async () => {
+    const res = await fetch(`${clientApiUrl}/projects/${testProjectId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: projectCookie,
+      },
+      body: JSON.stringify({
+        title: 'Distributed Consensus Lab (Updated)',
+        status: 'closed',
+      }),
+    });
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.equal(data.project.title, 'Distributed Consensus Lab (Updated)');
+    assert.equal(data.project.status, 'closed');
+  });
+
+  it('11. deleteProject: removes project via DELETE and subsequent GET returns 404', async () => {
+    const res = await fetch(`${clientApiUrl}/projects/${testProjectId}`, {
+      method: 'DELETE',
+      headers: { Cookie: projectCookie },
+    });
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.equal(data.message, 'Project successfully deleted');
+
+    // Confirm deletion
+    const getRes = await fetch(`${clientApiUrl}/projects/${testProjectId}`, {
+      method: 'GET',
+      headers: { Cookie: projectCookie },
+    });
+    assert.equal(getRes.status, 404);
   });
 });
 
