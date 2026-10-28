@@ -37,7 +37,12 @@ import {
   createProject,
   updateProject,
   deleteProject,
+  getProjectRecommendations,
 } from '../api/client';
+import { FactorBreakdown } from '../components/matching/FactorBreakdown';
+import { WhyThisMatch } from '../components/matching/WhyThisMatch';
+import { IncompleteProfileBanner } from '../components/matching/IncompleteProfileBanner';
+import { getScoreTier, formatTimeSlot } from '../utils/matchingHelpers';
 import { useAuth } from '../context/AuthContext';
 
 const COMMON_TIME_SLOTS = [
@@ -123,8 +128,21 @@ export function ProjectsPage() {
   const [profile, setProfile] = useState(null);
   const [completeness, setCompleteness] = useState(null);
 
-  // 2. Active Tab: 'browse' | 'mine' | 'create'
-  const [activeTab, setActiveTab] = useState('browse');
+  // 2. Active Tab: 'recommended' | 'browse' | 'mine' | 'create'
+  const [activeTab, setActiveTab] = useState('recommended');
+
+  // 2b. Recommended Projects State (Phase 6B)
+  const [recommendedProjects, setRecommendedProjects] = useState([]);
+  const [recPagination, setRecPagination] = useState({
+    page: 1,
+    limit: 6,
+    totalRecommendations: 0,
+    totalPages: 1,
+    hasMore: false,
+  });
+  const [loadingRecs, setLoadingRecs] = useState(true);
+  const [recError, setRecError] = useState(null);
+  const [recCompleteness, setRecCompleteness] = useState(null);
 
   // 3. Open Projects State
   const [openProjects, setOpenProjects] = useState([]);
@@ -213,6 +231,24 @@ export function ProjectsPage() {
     };
   }, []);
 
+  // Fetch Recommended Projects (Phase 6B)
+  const fetchRecommendedProjects = useCallback(async (page = 1) => {
+    try {
+      setLoadingRecs(true);
+      setRecError(null);
+      const res = await getProjectRecommendations({ page, limit: 6 });
+      setRecommendedProjects(res.recommendations || []);
+      setRecCompleteness(res.completeness || null);
+      setRecPagination(
+        res.pagination || { page: 1, limit: 6, totalRecommendations: 0, totalPages: 1, hasMore: false }
+      );
+    } catch (err) {
+      setRecError(err.message || 'Failed to load project recommendations');
+    } finally {
+      setLoadingRecs(false);
+    }
+  }, []);
+
   // Fetch Open Projects
   const fetchOpenProjects = useCallback(async (page = 1) => {
     try {
@@ -245,9 +281,10 @@ export function ProjectsPage() {
 
   // Initial fetch
   useEffect(() => {
+    fetchRecommendedProjects(1);
     fetchOpenProjects(1);
     fetchMyProjects(1);
-  }, [fetchOpenProjects, fetchMyProjects]);
+  }, [fetchRecommendedProjects, fetchOpenProjects, fetchMyProjects]);
 
   // Handle escape key to dismiss modals
   useEffect(() => {
@@ -530,15 +567,15 @@ export function ProjectsPage() {
         <div className="flex items-center gap-2">
           <Sliders className="w-4 h-4 text-accent" />
           <h2 className="font-serif text-sm font-medium text-text-main">
-            Implementation Status: Project Management Available · Teammate Discovery In Progress
+            Status: Database-Backed Compatibility Engine Operational
           </h2>
         </div>
         <p className="text-xs text-text-muted leading-relaxed max-w-3xl">
-          Database-backed project creation, editing, closing, and deletion are now fully operational at{' '}
+          SkillSync calculates real-time project recommendations deterministically across 6 calibrated factors from your saved profile inputs against open MongoDB projects at{' '}
           <code className="text-[11px] bg-bg-card px-1.5 py-0.5 rounded border border-border text-text-main">
-            /api/projects
+            GET /api/matching/recommendations/projects
           </code>
-          . Automated compatibility scoring and ranked candidate recommendations remain future work.
+          . Scores and grounded explanations reflect actual compatibility without artificial estimates.
         </p>
       </section>
 
@@ -684,7 +721,17 @@ export function ProjectsPage() {
       {/* 4. WORKSPACE TABS */}
       <section className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-3">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setActiveTab('recommended')}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                activeTab === 'recommended'
+                  ? 'bg-primary text-bg-page dark:bg-accent dark:text-primary font-semibold'
+                  : 'text-text-muted hover:text-text-main hover:bg-bg-section'
+              }`}
+            >
+              Recommended for You ({recPagination.totalRecommendations})
+            </button>
             <button
               onClick={() => setActiveTab('browse')}
               className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
@@ -721,6 +768,7 @@ export function ProjectsPage() {
               size="sm"
               variant="outline"
               onClick={() => {
+                if (activeTab === 'recommended') fetchRecommendedProjects(recPagination.page);
                 if (activeTab === 'browse') fetchOpenProjects(openPagination.page);
                 if (activeTab === 'mine') fetchMyProjects(myPagination.page);
               }}
@@ -731,6 +779,216 @@ export function ProjectsPage() {
             </Button>
           </div>
         </div>
+
+        {/* ========================================================================= */}
+        {/* VIEW 0: RECOMMENDED FOR YOU (Phase 6B)                                   */}
+        {/* ========================================================================= */}
+        {activeTab === 'recommended' && (
+          <div className="space-y-6">
+            {recError && (
+              <div className="rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/20 p-4 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-red-700 dark:text-red-300 text-xs">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{recError}</span>
+                </div>
+                <Button size="sm" variant="outline" onClick={() => fetchRecommendedProjects(recPagination.page)}>
+                  Retry
+                </Button>
+              </div>
+            )}
+
+            {recCompleteness && !recCompleteness.isComplete ? (
+              <IncompleteProfileBanner
+                trackName="Project Recommendations"
+                missingFields={recCompleteness.missingFields}
+              />
+            ) : loadingRecs ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[1, 2, 3, 4].map((n) => (
+                  <Card key={n} className="p-5 space-y-4 animate-pulse">
+                    <div className="flex justify-between items-center">
+                      <div className="h-4 bg-border/50 rounded w-1/2" />
+                      <div className="h-5 bg-border/40 rounded w-20" />
+                    </div>
+                    <div className="h-12 bg-border/30 rounded" />
+                    <div className="flex gap-2">
+                      <div className="h-5 bg-border/40 rounded w-16" />
+                      <div className="h-5 bg-border/40 rounded w-20" />
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : recommendedProjects.length === 0 ? (
+              <Card className="p-12 text-center border-dashed space-y-4">
+                <div className="w-12 h-12 rounded-full bg-bg-section border border-border flex items-center justify-center mx-auto text-text-muted">
+                  <Sparkles className="w-6 h-6 text-text-amber" />
+                </div>
+                <div className="space-y-1 max-w-sm mx-auto">
+                  <h3 className="font-serif text-base font-medium text-text-main">
+                    No Matching Projects Found
+                  </h3>
+                  <p className="text-xs text-text-muted">
+                    No open collaboration projects currently match your declared technical skills, timeline, and schedule.
+                  </p>
+                </div>
+                <div className="flex items-center justify-center gap-2 pt-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => fetchRecommendedProjects(1)}
+                    className="inline-flex items-center gap-1.5"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Refresh</span>
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => setActiveTab('browse')}
+                  >
+                    Browse All Open Projects
+                  </Button>
+                </div>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {recommendedProjects.map((rec) => {
+                  const proj = rec.project;
+                  const tier = getScoreTier(rec.score);
+                  return (
+                    <Card
+                      key={proj.id}
+                      className="p-5 flex flex-col justify-between space-y-4 border-l-4 border-l-accent"
+                    >
+                      <div className="space-y-3">
+                        {/* Title & Score Pill */}
+                        <div className="space-y-1.5">
+                          <div className="flex items-start justify-between gap-2">
+                            <h3 className="font-serif text-base font-medium text-text-main line-clamp-1">
+                              {proj.title}
+                            </h3>
+                            <span
+                              className={`shrink-0 inline-flex items-center px-2.5 py-0.5 rounded text-xs font-semibold border ${tier.badgeClass}`}
+                            >
+                              {rec.score}% Match · {tier.label}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-text-muted">
+                            Posted by <span className="text-text-main font-medium">{proj.owner?.name || 'Project Owner'}</span>
+                          </p>
+                        </div>
+
+                        {/* Description */}
+                        <p className="text-xs text-text-muted line-clamp-3 leading-relaxed">
+                          {proj.description}
+                        </p>
+
+                        {/* Required Skills */}
+                        <div className="space-y-1.5">
+                          <span className="text-[10px] font-medium uppercase tracking-wider text-text-muted block">
+                            Required Technical Skills ({proj.requiredSkills?.length || 0})
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {proj.requiredSkills && proj.requiredSkills.length > 0 ? (
+                              proj.requiredSkills.map((sk, idx) => (
+                                <span
+                                  key={idx}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] bg-bg-section border border-border text-text-main font-medium"
+                                >
+                                  <span>{sk.name}</span>
+                                  <span className="text-text-amber font-semibold">
+                                    L{sk.minLevel}
+                                  </span>
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-[11px] text-text-muted italic">None declared</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Metadata row */}
+                        <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border/50 text-[11px] text-text-muted">
+                          <div>
+                            <span className="font-medium text-text-main">Timeline:</span> {proj.timeline}
+                          </div>
+                          <div>
+                            <span className="font-medium text-text-main">Working Style:</span>{' '}
+                            <span className="capitalize">{proj.workingStyle}</span>
+                          </div>
+                          {proj.preferredLearningStyle && (
+                            <div>
+                              <span className="font-medium text-text-main">Learning Style:</span>{' '}
+                              <span className="capitalize">{proj.preferredLearningStyle.replace(/_/g, ' ')}</span>
+                            </div>
+                          )}
+                          {proj.relevantSubjects && proj.relevantSubjects.length > 0 && (
+                            <div className="col-span-2">
+                              <span className="font-medium text-text-main">Relevant Coursework:</span>{' '}
+                              <span>{proj.relevantSubjects.join(', ')}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Factor breakdown */}
+                        <FactorBreakdown factors={rec.factors} />
+
+                        {/* Why this match? */}
+                        <WhyThisMatch reasons={rec.reasons} />
+                      </div>
+
+                      {/* Card Action */}
+                      <div className="pt-3 border-t border-border flex items-center justify-between">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleOpenDetails(proj.id)}
+                          className="text-xs inline-flex items-center gap-1.5"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Inspect Project Details</span>
+                        </Button>
+                        <span className="text-[10px] text-text-muted">
+                          {proj.timeSlots?.length || 0} meeting window(s)
+                        </span>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Recommendations Pagination */}
+            {recPagination.totalPages > 1 && (
+              <div className="flex items-center justify-between pt-4 border-t border-border text-xs text-text-muted">
+                <span>
+                  Showing page {recPagination.page} of {recPagination.totalPages} ({recPagination.totalRecommendations} recommendations)
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={recPagination.page <= 1}
+                    onClick={() => fetchRecommendedProjects(recPagination.page - 1)}
+                    className="inline-flex items-center gap-1"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                    <span>Previous</span>
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={!recPagination.hasMore}
+                    onClick={() => fetchRecommendedProjects(recPagination.page + 1)}
+                    className="inline-flex items-center gap-1"
+                  >
+                    <span>Next</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ========================================================================= */}
         {/* VIEW A: BROWSE OPEN PROJECTS                                             */}
