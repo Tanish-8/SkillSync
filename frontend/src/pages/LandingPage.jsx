@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Check,
   ArrowRight,
@@ -118,7 +119,8 @@ const DEMO_CONTEXTS = {
   },
 };
 
-export function LandingPage({ onOpenAuth }) {
+export function LandingPage() {
+  const navigate = useNavigate();
   const [activeContext, setActiveContext] = useState('project');
   const [requestSent, setRequestSent] = useState(false);
 
@@ -163,7 +165,7 @@ export function LandingPage({ onOpenAuth }) {
           <Button
             variant="primary"
             size="lg"
-            onClick={() => handleScrollTo('demo')}
+            onClick={() => navigate('/auth?mode=signup')}
           >
             Get started <ArrowRight className="w-4 h-4 ml-1" aria-hidden="true" />
           </Button>
@@ -615,7 +617,7 @@ export function LandingPage({ onOpenAuth }) {
             <Button
               variant="primary"
               size="md"
-              onClick={() => onOpenAuth('register')}
+              onClick={() => navigate('/auth?mode=signup')}
             >
               Create student profile
             </Button>

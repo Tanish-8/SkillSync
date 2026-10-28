@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Sun, Moon, Menu, X } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { scrollToSection } from '../../utils/scroll';
 
-export function Header({ theme, toggleTheme, onOpenAuth }) {
+export function Header({ theme, toggleTheme }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
 
   const handleNavClick = (e, targetId) => {
     e.preventDefault();
@@ -94,7 +96,7 @@ export function Header({ theme, toggleTheme, onOpenAuth }) {
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => onOpenAuth('sign-in')}
+            onClick={() => navigate('/auth?mode=signin')}
           >
             Sign in
           </Button>
@@ -102,7 +104,7 @@ export function Header({ theme, toggleTheme, onOpenAuth }) {
           <Button
             variant="primary"
             size="sm"
-            onClick={(e) => handleNavClick(e, 'demo')}
+            onClick={() => navigate('/auth?mode=signup')}
           >
             Get started
           </Button>
@@ -186,7 +188,7 @@ export function Header({ theme, toggleTheme, onOpenAuth }) {
               className="w-full"
               onClick={() => {
                 setMobileMenuOpen(false);
-                onOpenAuth('sign-in');
+                navigate('/auth?mode=signin');
               }}
             >
               Sign in
@@ -195,7 +197,10 @@ export function Header({ theme, toggleTheme, onOpenAuth }) {
               variant="primary"
               size="sm"
               className="w-full"
-              onClick={(e) => handleNavClick(e, 'demo')}
+              onClick={() => {
+                setMobileMenuOpen(false);
+                navigate('/auth?mode=signup');
+              }}
             >
               Get started
             </Button>
