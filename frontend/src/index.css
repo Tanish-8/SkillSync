@@ -43,6 +43,24 @@
 }
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
   * {
     border-color: var(--color-border);
   }
@@ -51,6 +69,7 @@
     background-color: var(--color-bg-page);
     color: var(--color-text-main);
     font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+    line-height: 1.6;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -58,4 +77,3 @@
     letter-spacing: -0.015em;
   }
 }
-
