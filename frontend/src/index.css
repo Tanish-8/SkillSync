@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* SkillSync Immutable Light Palette */
+  --color-bg-page: #FAF7F0;
+  --color-bg-section: #F3EEE3;
+  --color-bg-card: #FFFFFF;
+  --color-border: #E4DECF;
+  --color-primary: #1B2A49;
+  --color-primary-foreground: #FAF7F0;
+  --color-primary-hover: #24365D;
+  --color-text-main: #1A1D26;
+  --color-text-muted: #5B6070;
+  --color-accent: #C98A1B;
+  --color-text-amber: #9A6408;
+
+  /* Factor Bar: Amber fill over Navy track in light mode */
+  --color-factor-track: #1B2A49;
+  --color-factor-fill: #C98A1B;
+}
+
+.dark {
+  /* SkillSync Immutable Dark Palette */
+  --color-bg-page: #12151D;
+  --color-bg-card: #1C212D;
+  --color-text-main: #EDE9DF;
+  --color-primary: #E9E2D0;
+  --color-primary-foreground: #12151D;
+  --color-primary-hover: #F3EEE3;
+  --color-accent: #E0A53A;
+  --color-text-amber: #E0A53A;
+
+  /* Derived Neutrals for Dark Mode (Restrained slate palette) */
+  --color-bg-section: #161B26;
+  --color-border: #262C3A;
+  --color-text-muted: #828898;
+
+  /* Factor Bar: Amber fill over Dark Neutral track in dark mode */
+  --color-factor-track: #262C3A;
+  --color-factor-fill: #E0A53A;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-bg-page);
+    color: var(--color-text-main);
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Fraunces', Georgia, serif;
+    letter-spacing: -0.015em;
+  }
+}
+
