@@ -346,18 +346,124 @@ describe('SkillSync StudentProfile API - Integration Tests', () => {
       assert.ok(data.error.includes('workingStyle must be one of'));
     });
 
-    it('rejects negative or zero weekly hours with HTTP 400', async () => {
+    it('rejects weekly hours outside the 0.5 to 168 range (e.g. -5, 0, 0.25, 169) with HTTP 400', async () => {
+      const invalidHours = [-5, 0, 0.25, 169];
+      for (const hours of invalidHours) {
+        const res = await fetch(`${baseUrl}/api/profile/me`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Cookie: userACookie },
+          body: JSON.stringify({ weeklyHours: hours }),
+        });
+
+        assert.equal(res.status, 400, `Expected 400 for weeklyHours: ${hours}`);
+        const data = await res.json();
+        assert.ok(
+          data.error.includes('between 0.5 and 168'),
+          `Error for ${hours} should mention range 0.5 and 168: "${data.error}"`
+        );
+      }
+    });
+
+    it('accepts valid weekly-hour boundary and intermediate values (0.5, 10, 168) with HTTP 200', async () => {
+      const validHours = [0.5, 10, 168];
+      for (const hours of validHours) {
+        const res = await fetch(`${baseUrl}/api/profile/me`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Cookie: userACookie },
+          body: JSON.stringify({ weeklyHours: hours }),
+        });
+
+        assert.equal(res.status, 200, `Expected 200 for weeklyHours: ${hours}`);
+        const data = await res.json();
+        assert.equal(data.profile.weeklyHours, hours);
+      }
+    });
+
+    it('accepts valid desired skills using canonical targetLevel with HTTP 200', async () => {
       const res = await fetch(`${baseUrl}/api/profile/me`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Cookie: userACookie },
         body: JSON.stringify({
-          weeklyHours: -5,
+          desiredSkills: [
+            { name: 'Python', targetLevel: 4 },
+            { name: 'Go', targetLevel: 3 },
+          ],
+        }),
+      });
+
+      assert.equal(res.status, 200);
+      const data = await res.json();
+      assert.deepEqual(data.profile.desiredSkills, [
+        { name: 'Python', targetLevel: 4 },
+        { name: 'Go', targetLevel: 3 },
+      ]);
+    });
+
+    it('rejects alias-only desired skill objects (minLevel/level) with HTTP 400', async () => {
+      // 1. Rejected alias minLevel
+      const resMinLevel = await fetch(`${baseUrl}/api/profile/me`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Cookie: userACookie },
+        body: JSON.stringify({
+          desiredSkills: [{ name: 'Python', minLevel: 4 }],
+        }),
+      });
+      assert.equal(resMinLevel.status, 400);
+      const dataMinLevel = await resMinLevel.json();
+      assert.ok(dataMinLevel.error.includes('Unexpected property in desired skill object: minLevel'));
+
+      // 2. Rejected alias level
+      const resLevel = await fetch(`${baseUrl}/api/profile/me`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Cookie: userACookie },
+        body: JSON.stringify({
+          desiredSkills: [{ name: 'Python', level: 4 }],
+        }),
+      });
+      assert.equal(resLevel.status, 400);
+      const dataLevel = await resLevel.json();
+      assert.ok(dataLevel.error.includes('Unexpected property in desired skill object: level'));
+    });
+
+    it('rejects desired skills missing targetLevel with HTTP 400', async () => {
+      const res = await fetch(`${baseUrl}/api/profile/me`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Cookie: userACookie },
+        body: JSON.stringify({
+          desiredSkills: [{ name: 'Python' }],
+        }),
+      });
+      assert.equal(res.status, 400);
+      const data = await res.json();
+      assert.ok(data.error.includes('targetLevel between 1 and 5'));
+    });
+
+    it('rejects unexpected properties inside skill objects with HTTP 400', async () => {
+      const res = await fetch(`${baseUrl}/api/profile/me`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Cookie: userACookie },
+        body: JSON.stringify({
+          skills: [{ name: 'React', level: 4, certified: true }],
         }),
       });
 
       assert.equal(res.status, 400);
       const data = await res.json();
-      assert.ok(data.error.includes('positive number'));
+      assert.ok(data.error.includes('Unexpected property in skill object: certified'));
+    });
+
+    it('rejects unexpected properties inside desired skill objects with HTTP 400', async () => {
+      const res = await fetch(`${baseUrl}/api/profile/me`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Cookie: userACookie },
+        body: JSON.stringify({
+          desiredSkills: [{ name: 'Python', targetLevel: 4, priority: 'urgent' }],
+        }),
+      });
+
+      assert.equal(res.status, 400);
+      const data = await res.json();
+      assert.ok(data.error.includes('Unexpected property in desired skill object: priority'));
     });
 
     it('rejects bio exceeding 500 characters with HTTP 400', async () => {

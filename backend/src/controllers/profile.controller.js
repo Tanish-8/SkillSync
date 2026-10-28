@@ -66,8 +66,14 @@ function validateProfilePayload(body) {
       return 'skills must be an array of skill objects';
     }
     for (const sk of body.skills) {
+      if (!isPlainObject(sk)) {
+        return 'skills must be an array of skill objects';
+      }
+      const extraKeys = Object.keys(sk).filter((k) => k !== 'name' && k !== 'level');
+      if (extraKeys.length > 0) {
+        return `Unexpected property in skill object: ${extraKeys.join(', ')}`;
+      }
       if (
-        !isPlainObject(sk) ||
         typeof sk.name !== 'string' ||
         sk.name.trim().length === 0 ||
         !Number.isInteger(sk.level) ||
@@ -144,14 +150,19 @@ function validateProfilePayload(body) {
       return 'desiredSkills must be an array of desired skill objects';
     }
     for (const d of body.desiredSkills) {
-      const target = d?.targetLevel ?? d?.minLevel ?? d?.level;
+      if (!isPlainObject(d)) {
+        return 'desiredSkills must be an array of desired skill objects';
+      }
+      const extraKeys = Object.keys(d).filter((k) => k !== 'name' && k !== 'targetLevel');
+      if (extraKeys.length > 0) {
+        return `Unexpected property in desired skill object: ${extraKeys.join(', ')}`;
+      }
       if (
-        !isPlainObject(d) ||
         typeof d.name !== 'string' ||
         d.name.trim().length === 0 ||
-        !Number.isInteger(target) ||
-        target < 1 ||
-        target > 5
+        !Number.isInteger(d.targetLevel) ||
+        d.targetLevel < 1 ||
+        d.targetLevel > 5
       ) {
         return 'Each desired skill must have a non-empty name and an integer targetLevel between 1 and 5';
       }
@@ -163,10 +174,10 @@ function validateProfilePayload(body) {
     if (
       typeof body.weeklyHours !== 'number' ||
       !Number.isFinite(body.weeklyHours) ||
-      body.weeklyHours <= 0 ||
+      body.weeklyHours < 0.5 ||
       body.weeklyHours > 168
     ) {
-      return 'weeklyHours must be a positive number between 0.5 and 168';
+      return 'weeklyHours must be a number between 0.5 and 168';
     }
   }
 
@@ -195,7 +206,6 @@ export async function getProfile(req, res, next) {
     next(error);
   }
 }
-
 /**
  * PUT /api/profile/me
  * Creates or updates the authenticated user's own profile.
