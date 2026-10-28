@@ -916,4 +916,108 @@ describe('SkillSync Projects API - Integration Tests', () => {
       assert.equal(payload.workingStyle, 'synchronous');
     });
   });
+
+  // ==========================================================================
+  // 9. Extended Optional Fields (Phase 6A: relevantSubjects & preferredLearningStyle)
+  // ==========================================================================
+  describe('9. Extended Optional Fields (relevantSubjects & preferredLearningStyle)', () => {
+    it('creates project with valid relevantSubjects and preferredLearningStyle', async () => {
+      const res = await fetch(`${baseUrl}/api/projects`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: userACookie,
+        },
+        body: JSON.stringify({
+          ...validProjectPayload,
+          title: 'Quantum Compiler Toolchain',
+          relevantSubjects: ['Quantum Computing', 'Compiler Design'],
+          preferredLearningStyle: 'hands_on',
+        }),
+      });
+
+      assert.equal(res.status, 201);
+      const data = await res.json();
+      assert.deepEqual(data.project.relevantSubjects, ['Quantum Computing', 'Compiler Design']);
+      assert.equal(data.project.preferredLearningStyle, 'hands_on');
+
+      // Verify in MongoDB
+      const doc = await Project.findById(data.project.id);
+      assert.deepEqual(doc.relevantSubjects, ['Quantum Computing', 'Compiler Design']);
+      assert.equal(doc.preferredLearningStyle, 'hands_on');
+    });
+
+    it('updates project relevantSubjects and preferredLearningStyle via PATCH', async () => {
+      // First create a project without them
+      const createRes = await fetch(`${baseUrl}/api/projects`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: userACookie,
+        },
+        body: JSON.stringify({
+          ...validProjectPayload,
+          title: 'Graph Neural Networks Lab',
+        }),
+      });
+      assert.equal(createRes.status, 201);
+      const { project } = await createRes.json();
+
+      // Update via PATCH
+      const patchRes = await fetch(`${baseUrl}/api/projects/${project.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: userACookie,
+        },
+        body: JSON.stringify({
+          relevantSubjects: ['Graph Algorithms', 'Deep Learning'],
+          preferredLearningStyle: 'visual',
+        }),
+      });
+
+      assert.equal(patchRes.status, 200);
+      const updated = await patchRes.json();
+      assert.deepEqual(updated.project.relevantSubjects, ['Graph Algorithms', 'Deep Learning']);
+      assert.equal(updated.project.preferredLearningStyle, 'visual');
+    });
+
+    it('rejects invalid preferredLearningStyle enum value with HTTP 400', async () => {
+      const res = await fetch(`${baseUrl}/api/projects`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: userACookie,
+        },
+        body: JSON.stringify({
+          ...validProjectPayload,
+          title: 'Invalid Style Project',
+          preferredLearningStyle: 'telepathic',
+        }),
+      });
+
+      assert.equal(res.status, 400);
+      const data = await res.json();
+      assert.match(data.error, /preferredLearningStyle must be one of/);
+    });
+
+    it('rejects non-array relevantSubjects with HTTP 400', async () => {
+      const res = await fetch(`${baseUrl}/api/projects`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: userACookie,
+        },
+        body: JSON.stringify({
+          ...validProjectPayload,
+          title: 'Invalid Subjects Project',
+          relevantSubjects: 'Distributed Systems',
+        }),
+      });
+
+      assert.equal(res.status, 400);
+      const data = await res.json();
+      assert.match(data.error, /relevantSubjects must be an array/);
+    });
+  });
 });

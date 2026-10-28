@@ -242,3 +242,52 @@ export async function deleteProject(projectId) {
     method: 'DELETE',
   });
 }
+
+
+/**
+ * Retrieve database-backed project recommendations for the authenticated student.
+ *
+ * @param {{ page?: number, limit?: number }} [options]
+ * @returns {Promise<{ recommendations: Array<Object>, completeness: Object, pagination: { page: number, limit: number, totalRecommendations: number, totalPages: number, hasMore: boolean } }>}
+ */
+export async function getProjectRecommendations({ page, limit } = {}) {
+  const params = new URLSearchParams();
+  if (page !== undefined && page !== null) params.append('page', String(page));
+  if (limit !== undefined && limit !== null) params.append('limit', String(limit));
+  const query = params.toString() ? `?${params.toString()}` : '';
+  return request(`/matching/recommendations/projects${query}`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * Retrieve database-backed study buddy recommendations for the authenticated student.
+ *
+ * @param {{ page?: number, limit?: number }} [options]
+ * @returns {Promise<{ recommendations: Array<Object>, completeness: Object, pagination: { page: number, limit: number, totalRecommendations: number, totalPages: number, hasMore: boolean } }>}
+ */
+export async function getStudyBuddyRecommendations({ page, limit } = {}) {
+  const params = new URLSearchParams();
+  if (page !== undefined && page !== null) params.append('page', String(page));
+  if (limit !== undefined && limit !== null) params.append('limit', String(limit));
+  const query = params.toString() ? `?${params.toString()}` : '';
+  return request(`/matching/recommendations/study-buddies${query}`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * Retrieve database-backed SkillSwap recommendations enforcing bilateral skill reciprocity.
+ *
+ * @param {{ page?: number, limit?: number }} [options]
+ * @returns {Promise<{ recommendations: Array<Object>, completeness: Object, pagination: { page: number, limit: number, totalRecommendations: number, totalPages: number, hasMore: boolean } }>}
+ */
+export async function getSkillSwapRecommendations({ page, limit } = {}) {
+  const params = new URLSearchParams();
+  if (page !== undefined && page !== null) params.append('page', String(page));
+  if (limit !== undefined && limit !== null) params.append('limit', String(limit));
+  const query = params.toString() ? `?${params.toString()}` : '';
+  return request(`/matching/recommendations/skillswap${query}`, {
+    method: 'GET',
+  });
+}

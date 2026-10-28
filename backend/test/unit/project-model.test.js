@@ -21,6 +21,8 @@ describe('Project Model & Controller Helpers - Unit Tests', () => {
     goals: ['competition', 'portfolio'],
     timeline: '4 months',
     workingStyle: 'synchronous',
+    relevantSubjects: ['Robotics', 'Computer Vision'],
+    preferredLearningStyle: 'hands_on',
     status: 'open',
   };
 
@@ -104,50 +106,68 @@ describe('Project Model & Controller Helpers - Unit Tests', () => {
 
     it('validates requiredSkills constraints', () => {
       assert.match(
-        validateProjectFields({ ...validBody, requiredSkills: 'not-array' }, false),
+        validateProjectFields({ ...validBody, requiredSkills: 'not an array' }, false),
         /requiredSkills must be an array of skill requirements/
       );
       assert.match(
-        validateProjectFields({ ...validBody, requiredSkills: ['not-object'] }, false),
-        /Each required skill must be an object with name and minLevel/
-      );
-      assert.match(
         validateProjectFields(
-          { ...validBody, requiredSkills: [{ name: 'Go', minLevel: 4, level: 4 }] },
-          false
-        ),
-        /Unexpected property in required skill: level/
-      );
-      assert.match(
-        validateProjectFields(
-          { ...validBody, requiredSkills: [{ name: '', minLevel: 4 }] },
+          { ...validBody, requiredSkills: [{ minLevel: 3 }] },
           false
         ),
         /Each required skill must have a non-empty name/
       );
       assert.match(
         validateProjectFields(
-          { ...validBody, requiredSkills: [{ name: 'Go', minLevel: 6 }] },
+          { ...validBody, requiredSkills: [{ name: 'C++', minLevel: 6 }] },
           false
         ),
         /Each required skill must have an integer minLevel between 1 and 5/
       );
       assert.match(
         validateProjectFields(
-          { ...validBody, requiredSkills: [{ name: 'Go', minLevel: 0 }] },
+          { ...validBody, requiredSkills: [{ name: 'C++', minLevel: 0 }] },
           false
         ),
         /Each required skill must have an integer minLevel between 1 and 5/
+      );
+      assert.match(
+        validateProjectFields(
+          { ...validBody, requiredSkills: [{ name: 'C++', minLevel: 2.5 }] },
+          false
+        ),
+        /Each required skill must have an integer minLevel between 1 and 5/
+      );
+      assert.match(
+        validateProjectFields(
+          {
+            ...validBody,
+            requiredSkills: [{ name: 'C++', minLevel: 3, hack: 'injection' }],
+          },
+          false
+        ),
+        /Unexpected property in required skill: hack/
       );
     });
 
     it('validates timeSlots and goals as string arrays', () => {
       assert.match(
-        validateProjectFields({ ...validBody, timeSlots: [1, 2, 3] }, false),
+        validateProjectFields({ ...validBody, timeSlots: [123] }, false),
         /timeSlots must be an array of string slot identifiers/
       );
       assert.match(
-        validateProjectFields({ ...validBody, goals: [true] }, false),
+        validateProjectFields({ ...validBody, timeSlots: 'not array' }, false),
+        /timeSlots must be an array of string slot identifiers/
+      );
+      assert.match(
+        validateProjectFields({ ...validBody, goals: null }, false),
+        /goals cannot be null/
+      );
+      assert.match(
+        validateProjectFields({ ...validBody, goals: [123] }, false),
+        /goals must be an array of string tags/
+      );
+      assert.match(
+        validateProjectFields({ ...validBody, goals: 'not array' }, false),
         /goals must be an array of string tags/
       );
     });
@@ -159,6 +179,10 @@ describe('Project Model & Controller Helpers - Unit Tests', () => {
       );
       assert.match(
         validateProjectFields({ ...validBody, timeline: 'A'.repeat(101) }, false),
+        /timeline must be a non-empty string up to 100 characters/
+      );
+      assert.match(
+        validateProjectFields({ ...validBody, timeline: 100 }, false),
         /timeline must be a non-empty string up to 100 characters/
       );
     });
@@ -173,21 +197,44 @@ describe('Project Model & Controller Helpers - Unit Tests', () => {
         /status must be one of: open, closed/
       );
     });
+
+    it('validates relevantSubjects and preferredLearningStyle optional fields', () => {
+      assert.match(
+        validateProjectFields({ ...validBody, relevantSubjects: 'not-an-array' }, false),
+        /relevantSubjects must be an array of string subject names/
+      );
+      assert.match(
+        validateProjectFields({ ...validBody, relevantSubjects: [123] }, false),
+        /relevantSubjects must be an array of string subject names/
+      );
+      assert.match(
+        validateProjectFields({ ...validBody, preferredLearningStyle: 'unknown_style' }, false),
+        /preferredLearningStyle must be one of/
+      );
+      assert.equal(
+        validateProjectFields(
+          { ...validBody, relevantSubjects: ['Distributed Systems'], preferredLearningStyle: 'visual' },
+          false
+        ),
+        null
+      );
+    });
   });
 
   describe('2. parsePaginationParams', () => {
     it('provides default page 1 and limit 20 when omitted', () => {
-      const res = parsePaginationParams({});
-      assert.equal(res.page, 1);
-      assert.equal(res.limit, 20);
-      assert.equal(res.error, undefined);
+      assert.deepEqual(parsePaginationParams({}), { page: 1, limit: 20 });
     });
 
     it('parses valid positive integer query params', () => {
-      const res = parsePaginationParams({ page: '3', limit: '15' });
-      assert.equal(res.page, 3);
-      assert.equal(res.limit, 15);
-      assert.equal(res.error, undefined);
+      assert.deepEqual(parsePaginationParams({ page: '3', limit: '15' }), {
+        page: 3,
+        limit: 15,
+      });
+      assert.deepEqual(parsePaginationParams({ page: '1', limit: '50' }), {
+        page: 1,
+        limit: 50,
+      });
     });
 
     it('rejects invalid page values', () => {
@@ -196,7 +243,7 @@ describe('Project Model & Controller Helpers - Unit Tests', () => {
         /page must be a positive integer/
       );
       assert.match(
-        parsePaginationParams({ page: '-2' }).error,
+        parsePaginationParams({ page: '-1' }).error,
         /page must be a positive integer/
       );
       assert.match(
@@ -243,10 +290,12 @@ describe('Project Model & Controller Helpers - Unit Tests', () => {
       goals: ['portfolio', 'learning'],
       timeline: 'Semester',
       workingStyle: 'mixed',
+      relevantSubjects: ['Distributed Systems', 'Cloud Computing'],
+      preferredLearningStyle: 'hands_on',
       status: 'open',
     });
 
-    it('toSafeObject returns sanitized document without internal secrets or MongoDB internals', () => {
+    it('toSafeObject returns sanitized document with extended optional fields', () => {
       const safe = project.toSafeObject();
       assert.equal(safe.id, project._id.toString());
       assert.equal(safe.ownerId, ownerId.toString());
@@ -259,6 +308,8 @@ describe('Project Model & Controller Helpers - Unit Tests', () => {
       assert.deepEqual(safe.goals, ['portfolio', 'learning']);
       assert.equal(safe.timeline, 'Semester');
       assert.equal(safe.workingStyle, 'mixed');
+      assert.deepEqual(safe.relevantSubjects, ['Distributed Systems', 'Cloud Computing']);
+      assert.equal(safe.preferredLearningStyle, 'hands_on');
       assert.equal(safe.status, 'open');
       assert.equal(safe._id, undefined);
       assert.equal(safe.__v, undefined);
@@ -267,6 +318,10 @@ describe('Project Model & Controller Helpers - Unit Tests', () => {
 
     it('toMatchingEnginePayload produces valid contract for calculateProjectCompatibility', () => {
       const projectPayload = project.toMatchingEnginePayload();
+
+      assert.deepEqual(projectPayload.relevantSubjects, ['Distributed Systems', 'Cloud Computing']);
+      assert.equal(projectPayload.preferredLearningStyle, 'hands_on');
+      assert.equal(projectPayload.learningStyle, 'hands_on');
 
       const candidateStudent = {
         skills: [
@@ -277,11 +332,12 @@ describe('Project Model & Controller Helpers - Unit Tests', () => {
         goals: ['portfolio'],
         timeline: 'Semester',
         workingStyle: 'mixed',
-        learningStyle: 'mixed',
+        learningStyle: 'hands_on',
         academicBackground: {
           degree: 'B.S.',
           branch: 'Computer Science',
           yearOfStudy: 3,
+          relevantSubjects: ['Distributed Systems', 'Operating Systems'],
         },
         previousProjects: [
           {

@@ -108,6 +108,14 @@ const SUGGESTED_TIMELINES = [
   'Flexible / Ongoing',
 ];
 
+const LEARNING_STYLE_OPTIONS = [
+  { value: 'visual', label: 'Visual (Diagrams & Architecture)' },
+  { value: 'reading', label: 'Reading / Writing (Specs & Documentation)' },
+  { value: 'hands_on', label: 'Hands-on (Interactive Prototyping)' },
+  { value: 'discussion', label: 'Discussion (Brainstorming & Pairing)' },
+  { value: 'mixed', label: 'Mixed / Flexible' },
+];
+
 export function ProjectsPage() {
   const { user } = useAuth();
 
@@ -151,6 +159,9 @@ export function ProjectsPage() {
   const [goalInput, setGoalInput] = useState('');
   const [createTimeline, setCreateTimeline] = useState('Spring 2026 semester');
   const [createWorkingStyle, setCreateWorkingStyle] = useState('mixed');
+  const [createRelevantSubjects, setCreateRelevantSubjects] = useState([]);
+  const [subjectInput, setSubjectInput] = useState('');
+  const [createPreferredLearningStyle, setCreatePreferredLearningStyle] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState(null);
   const [formSuccess, setFormSuccess] = useState(null);
@@ -171,6 +182,9 @@ export function ProjectsPage() {
   const [editTimeline, setEditTimeline] = useState('');
   const [editWorkingStyle, setEditWorkingStyle] = useState('mixed');
   const [editStatus, setEditStatus] = useState('open');
+  const [editRelevantSubjects, setEditRelevantSubjects] = useState([]);
+  const [editSubjectInput, setEditSubjectInput] = useState('');
+  const [editPreferredLearningStyle, setEditPreferredLearningStyle] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
   const [editError, setEditError] = useState(null);
 
@@ -278,6 +292,9 @@ export function ProjectsPage() {
     setEditTimeline(proj.timeline || '');
     setEditWorkingStyle(proj.workingStyle || 'mixed');
     setEditStatus(proj.status || 'open');
+    setEditRelevantSubjects(Array.isArray(proj.relevantSubjects) ? [...proj.relevantSubjects] : []);
+    setEditSubjectInput('');
+    setEditPreferredLearningStyle(proj.preferredLearningStyle || '');
     setEditError(null);
   };
 
@@ -337,6 +354,8 @@ export function ProjectsPage() {
         goals: createGoals,
         timeline: trimmedTimeline,
         workingStyle: createWorkingStyle,
+        relevantSubjects: createRelevantSubjects.length > 0 ? createRelevantSubjects : undefined,
+        preferredLearningStyle: createPreferredLearningStyle || undefined,
       };
 
       const res = await createProject(payload);
@@ -351,6 +370,9 @@ export function ProjectsPage() {
       setGoalInput('');
       setCreateTimeline('Spring 2026 semester');
       setCreateWorkingStyle('mixed');
+      setCreateRelevantSubjects([]);
+      setSubjectInput('');
+      setCreatePreferredLearningStyle('');
 
       // Refresh listings and switch to My Projects
       await fetchOpenProjects(1);
@@ -410,6 +432,8 @@ export function ProjectsPage() {
         timeline: editTimeline.trim(),
         workingStyle: editWorkingStyle,
         status: editStatus,
+        relevantSubjects: editRelevantSubjects,
+        preferredLearningStyle: editPreferredLearningStyle || undefined,
       };
 
       const res = await updateProject(editingProject.id, payload);
@@ -1300,6 +1324,85 @@ export function ProjectsPage() {
                 />
               </div>
 
+              {/* Optional Relevant Coursework / Subjects */}
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-text-main">
+                  Relevant Subjects / Coursework <span className="text-[10px] text-text-muted font-normal">(Optional)</span>
+                </label>
+                <p className="text-[10px] text-text-muted">
+                  Add target subjects or course codes to match candidate academic relevance:
+                </p>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Add subject (e.g. Distributed Systems)..."
+                    value={subjectInput}
+                    onChange={(e) => setSubjectInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const subj = subjectInput.trim();
+                        if (subj && !createRelevantSubjects.includes(subj)) {
+                          setCreateRelevantSubjects((prev) => [...prev, subj]);
+                          setSubjectInput('');
+                        }
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const subj = subjectInput.trim();
+                      if (subj && !createRelevantSubjects.includes(subj)) {
+                        setCreateRelevantSubjects((prev) => [...prev, subj]);
+                        setSubjectInput('');
+                      }
+                    }}
+                  >
+                    Add
+                  </Button>
+                </div>
+                {createRelevantSubjects.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {createRelevantSubjects.map((s) => (
+                      <span
+                        key={s}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] bg-accent/10 border border-accent/30 text-text-main"
+                      >
+                        <span>{s}</span>
+                        <button
+                          type="button"
+                          onClick={() => setCreateRelevantSubjects((prev) => prev.filter((item) => item !== s))}
+                          className="hover:text-red-500"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Preferred Learning Style */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-text-main">
+                  Preferred Learning / Collaboration Style <span className="text-[10px] text-text-muted font-normal">(Optional)</span>
+                </label>
+                <select
+                  value={createPreferredLearningStyle}
+                  onChange={(e) => setCreatePreferredLearningStyle(e.target.value)}
+                  className="w-full px-2.5 py-2 text-xs rounded-md border border-border bg-bg-card text-text-main focus:outline-none focus:ring-1 focus:ring-accent"
+                >
+                  <option value="">Any / Flexible (No specific preference)</option>
+                  {LEARNING_STYLE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               {/* Project Goals */}
               <div className="space-y-2">
                 <label className="text-xs font-medium text-text-main">Project Goals</label>
@@ -1528,6 +1631,32 @@ export function ProjectsPage() {
                 </span>
               </div>
             </div>
+
+            {/* Preferred Learning Style & Relevant Subjects */}
+            {(selectedProject.preferredLearningStyle || (selectedProject.relevantSubjects && selectedProject.relevantSubjects.length > 0)) && (
+              <div className="space-y-3 p-4 rounded-lg border border-border bg-bg-section/40 text-xs">
+                {selectedProject.preferredLearningStyle && (
+                  <div>
+                    <span className="text-[10px] uppercase tracking-wider text-text-muted block">Preferred Learning Style</span>
+                    <span className="font-medium text-text-main capitalize mt-0.5 block">
+                      {selectedProject.preferredLearningStyle.replace(/_/g, ' ')}
+                    </span>
+                  </div>
+                )}
+                {selectedProject.relevantSubjects && selectedProject.relevantSubjects.length > 0 && (
+                  <div>
+                    <span className="text-[10px] uppercase tracking-wider text-text-muted block">Relevant Coursework / Subjects</span>
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {selectedProject.relevantSubjects.map((subj, i) => (
+                        <span key={i} className="px-2 py-0.5 rounded text-[10px] bg-bg-card border border-border text-text-main">
+                          {subj}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Goals */}
             {selectedProject.goals && selectedProject.goals.length > 0 && (
@@ -1786,6 +1915,82 @@ export function ProjectsPage() {
                     <option value="mixed">Mixed (Hybrid checkpoints)</option>
                   </select>
                 </div>
+              </div>
+
+              {/* Optional Relevant Subjects */}
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-text-main">
+                  Relevant Subjects / Coursework <span className="text-[10px] text-text-muted font-normal">(Optional)</span>
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Add subject (e.g. Distributed Systems)..."
+                    value={editSubjectInput}
+                    onChange={(e) => setEditSubjectInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const subj = editSubjectInput.trim();
+                        if (subj && !editRelevantSubjects.includes(subj)) {
+                          setEditRelevantSubjects((prev) => [...prev, subj]);
+                          setEditSubjectInput('');
+                        }
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const subj = editSubjectInput.trim();
+                      if (subj && !editRelevantSubjects.includes(subj)) {
+                        setEditRelevantSubjects((prev) => [...prev, subj]);
+                        setEditSubjectInput('');
+                      }
+                    }}
+                  >
+                    Add
+                  </Button>
+                </div>
+                {editRelevantSubjects.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {editRelevantSubjects.map((s) => (
+                      <span
+                        key={s}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] bg-accent/10 border border-accent/30 text-text-main"
+                      >
+                        <span>{s}</span>
+                        <button
+                          type="button"
+                          onClick={() => setEditRelevantSubjects((prev) => prev.filter((item) => item !== s))}
+                          className="hover:text-red-500"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Preferred Learning Style */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-text-main">
+                  Preferred Learning Style <span className="text-[10px] text-text-muted font-normal">(Optional)</span>
+                </label>
+                <select
+                  value={editPreferredLearningStyle}
+                  onChange={(e) => setEditPreferredLearningStyle(e.target.value)}
+                  className="w-full px-2.5 py-2 text-xs rounded-md border border-border bg-bg-card text-text-main focus:outline-none focus:ring-1 focus:ring-accent"
+                >
+                  <option value="">Any / Flexible (No specific preference)</option>
+                  {LEARNING_STYLE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Modal Buttons */}

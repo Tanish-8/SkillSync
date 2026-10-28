@@ -284,5 +284,43 @@ describe('Frontend API Client & Auth Integration Tests', () => {
     });
     assert.equal(getRes.status, 404);
   });
+
+  it('12. getProjectRecommendations: returns recommendations envelope with completeness and pagination', async () => {
+    const res = await fetch(`${clientApiUrl}/matching/recommendations/projects?page=1&limit=5`, {
+      method: 'GET',
+      headers: { Cookie: projectCookie },
+    });
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.ok(Array.isArray(data.recommendations));
+    assert.ok(data.completeness !== undefined);
+    assert.ok(data.pagination !== undefined);
+    assert.equal(data.pagination.page, 1);
+    assert.equal(data.pagination.limit, 5);
+  });
+
+  it('13. getStudyBuddyRecommendations: returns recommendations envelope with completeness and pagination', async () => {
+    const res = await fetch(`${clientApiUrl}/matching/recommendations/study-buddies?page=1&limit=5`, {
+      method: 'GET',
+      headers: { Cookie: projectCookie },
+    });
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.ok(Array.isArray(data.recommendations));
+    assert.ok(data.completeness !== undefined);
+    assert.ok(data.pagination !== undefined);
+  });
+
+  it('14. getSkillSwapRecommendations: returns recommendations envelope with completeness and pagination', async () => {
+    const res = await fetch(`${clientApiUrl}/matching/recommendations/skillswap?page=1&limit=5`, {
+      method: 'GET',
+      headers: { Cookie: projectCookie },
+    });
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.ok(Array.isArray(data.recommendations));
+    assert.ok(data.completeness !== undefined);
+    assert.ok(data.pagination !== undefined);
+  });
 });
 

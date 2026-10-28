@@ -13,7 +13,7 @@
 
 import mongoose from 'mongoose';
 import Project, { PROJECT_STATUSES } from '../models/Project.js';
-import { WORKING_STYLES } from '../services/matching/compatibilityEngine.js';
+import { WORKING_STYLES, LEARNING_STYLES } from '../services/matching/compatibilityEngine.js';
 
 export const ALLOWED_PROJECT_FIELDS = Object.freeze(
   new Set([
@@ -24,6 +24,8 @@ export const ALLOWED_PROJECT_FIELDS = Object.freeze(
     'goals',
     'timeline',
     'workingStyle',
+    'relevantSubjects',
+    'preferredLearningStyle',
     'status',
   ])
 );
@@ -179,7 +181,27 @@ export function validateProjectFields(body, isUpdate = false) {
     }
   }
 
-  // 12. Validate status
+  // 12. Validate relevantSubjects (optional)
+  if ('relevantSubjects' in body) {
+    if (
+      !Array.isArray(body.relevantSubjects) ||
+      !body.relevantSubjects.every((s) => typeof s === 'string')
+    ) {
+      return 'relevantSubjects must be an array of string subject names';
+    }
+  }
+
+  // 13. Validate preferredLearningStyle (optional)
+  if ('preferredLearningStyle' in body) {
+    if (
+      typeof body.preferredLearningStyle !== 'string' ||
+      !LEARNING_STYLES.includes(body.preferredLearningStyle.trim().toLowerCase())
+    ) {
+      return `preferredLearningStyle must be one of: ${LEARNING_STYLES.join(', ')}`;
+    }
+  }
+
+  // 14. Validate status
   if ('status' in body) {
     if (
       typeof body.status !== 'string' ||
@@ -244,6 +266,8 @@ export async function createProject(req, res, next) {
       goals,
       timeline,
       workingStyle,
+      relevantSubjects,
+      preferredLearningStyle,
       status = 'open',
     } = req.body;
 
@@ -259,6 +283,12 @@ export async function createProject(req, res, next) {
       goals: goals.map((g) => (typeof g === 'string' ? g.trim() : g)),
       timeline: timeline.trim(),
       workingStyle: workingStyle.trim().toLowerCase(),
+      relevantSubjects: Array.isArray(relevantSubjects)
+        ? relevantSubjects.map((s) => (typeof s === 'string' ? s.trim() : s)).filter(Boolean)
+        : undefined,
+      preferredLearningStyle: preferredLearningStyle
+        ? preferredLearningStyle.trim().toLowerCase()
+        : undefined,
       status: status ? status.trim().toLowerCase() : 'open',
     });
 
@@ -271,6 +301,7 @@ export async function createProject(req, res, next) {
     next(error);
   }
 }
+
 /**
  * GET /api/projects
  * Lists open projects, sorted newest first, with pagination.
@@ -312,6 +343,7 @@ export async function getOpenProjects(req, res, next) {
     next(error);
   }
 }
+
 /**
  * GET /api/projects/mine
  * Returns all projects owned by the authenticated user (both open and closed),
@@ -354,6 +386,7 @@ export async function getMyProjects(req, res, next) {
     next(error);
   }
 }
+
 /**
  * GET /api/projects/:id
  * Retrieves a single project document by its MongoDB ObjectId.
@@ -377,6 +410,7 @@ export async function getProjectById(req, res, next) {
     next(error);
   }
 }
+
 /**
  * PATCH /api/projects/:id
  * Updates an existing project. Only the project owner is permitted.
@@ -430,6 +464,14 @@ export async function updateProject(req, res, next) {
     if ('workingStyle' in req.body) {
       project.workingStyle = req.body.workingStyle.trim().toLowerCase();
     }
+    if ('relevantSubjects' in req.body) {
+      project.relevantSubjects = req.body.relevantSubjects
+        .map((s) => (typeof s === 'string' ? s.trim() : s))
+        .filter(Boolean);
+    }
+    if ('preferredLearningStyle' in req.body) {
+      project.preferredLearningStyle = req.body.preferredLearningStyle.trim().toLowerCase();
+    }
     if ('status' in req.body) {
       project.status = req.body.status.trim().toLowerCase();
     }
@@ -443,6 +485,7 @@ export async function updateProject(req, res, next) {
     next(error);
   }
 }
+
 /**
  * DELETE /api/projects/:id
  * Deletes an existing project. Only the project owner is permitted.

@@ -8,7 +8,10 @@
  */
 
 import mongoose from 'mongoose';
-import { WORKING_STYLES } from '../services/matching/compatibilityEngine.js';
+import {
+  WORKING_STYLES,
+  LEARNING_STYLES,
+} from '../services/matching/compatibilityEngine.js';
 
 export const PROJECT_STATUSES = Object.freeze(['open', 'closed']);
 
@@ -90,6 +93,21 @@ const projectSchema = new mongoose.Schema(
         message: `workingStyle must be one of: ${WORKING_STYLES.join(', ')}`,
       },
     },
+    // Optional data contract extensions for academic relevance & learning style compatibility
+    relevantSubjects: {
+      type: [String],
+      default: undefined,
+    },
+    preferredLearningStyle: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      enum: {
+        values: LEARNING_STYLES,
+        message: `preferredLearningStyle must be one of: ${LEARNING_STYLES.join(', ')}`,
+      },
+      default: undefined,
+    },
     status: {
       type: String,
       required: true,
@@ -130,6 +148,8 @@ projectSchema.methods.toSafeObject = function () {
     goals: Array.isArray(this.goals) ? [...this.goals] : [],
     timeline: this.timeline,
     workingStyle: this.workingStyle,
+    relevantSubjects: Array.isArray(this.relevantSubjects) ? [...this.relevantSubjects] : [],
+    preferredLearningStyle: this.preferredLearningStyle,
     status: this.status,
     createdAt: this.createdAt,
     updatedAt: this.updatedAt,
@@ -143,11 +163,16 @@ projectSchema.methods.toSafeObject = function () {
  */
 projectSchema.methods.toMatchingEnginePayload = function () {
   return {
-    requiredSkills: this.requiredSkills.map((s) => ({ name: s.name, minLevel: s.minLevel })),
-    timeSlots: [...this.timeSlots],
-    goals: [...this.goals],
+    requiredSkills: Array.isArray(this.requiredSkills)
+      ? this.requiredSkills.map((s) => ({ name: s.name, minLevel: s.minLevel }))
+      : [],
+    timeSlots: Array.isArray(this.timeSlots) ? [...this.timeSlots] : [],
+    goals: Array.isArray(this.goals) ? [...this.goals] : [],
     timeline: this.timeline,
     workingStyle: this.workingStyle,
+    relevantSubjects: Array.isArray(this.relevantSubjects) ? [...this.relevantSubjects] : [],
+    preferredLearningStyle: this.preferredLearningStyle,
+    learningStyle: this.preferredLearningStyle,
   };
 };
 
