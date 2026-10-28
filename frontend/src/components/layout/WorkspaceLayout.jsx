@@ -50,7 +50,7 @@ export function WorkspaceLayout({ theme, toggleTheme }) {
   return (
     <div className="min-h-screen bg-bg-page text-text-main flex flex-col justify-between transition-colors duration-200">
       {/* 1. AUTHENTICATED WORKSPACE TOP NAVIGATION BAR */}
-      <header className="sticky top-0 z-30 w-full border-b border-border bg-bg-page/95 backdrop-blur-xs transition-colors">
+      <header className="sticky top-0 z-30 w-full border-b border-border bg-bg-page transition-colors">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
           {/* Wordmark */}
           <Link
@@ -64,10 +64,10 @@ export function WorkspaceLayout({ theme, toggleTheme }) {
             <span className="w-1.5 h-1.5 rounded-full bg-accent inline-block" />
           </Link>
 
-          {/* Desktop Navigation Links */}
+          {/* Desktop Navigation Links (lg and above) */}
           <nav
             aria-label="Workspace Navigation"
-            className="hidden md:flex items-center gap-1 text-sm font-sans"
+            className="hidden lg:flex items-center gap-1 text-sm font-sans"
           >
             {WORKSPACE_NAV_ITEMS.map((item) => {
               const Icon = item.icon;
@@ -89,8 +89,8 @@ export function WorkspaceLayout({ theme, toggleTheme }) {
             })}
           </nav>
 
-          {/* Desktop Right Action Bar */}
-          <div className="hidden sm:flex items-center gap-2.5">
+          {/* Desktop Right Action Bar (lg and above) */}
+          <div className="hidden lg:flex items-center gap-2.5">
             {/* Theme Toggle */}
             <button
               type="button"
@@ -118,8 +118,8 @@ export function WorkspaceLayout({ theme, toggleTheme }) {
             </Button>
           </div>
 
-          {/* Mobile Menu & Theme Toggle */}
-          <div className="flex sm:hidden items-center gap-2">
+          {/* Mobile/Tablet Menu & Theme Toggle (below lg) */}
+          <div className="flex lg:hidden items-center gap-2">
             <button
               type="button"
               onClick={toggleTheme}
@@ -149,9 +149,9 @@ export function WorkspaceLayout({ theme, toggleTheme }) {
           </div>
         </div>
 
-        {/* Mobile Navigation Dropdown */}
+        {/* Mobile/Tablet Navigation Dropdown (below lg) */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-border bg-bg-card px-4 py-3 space-y-2 transition-colors">
+          <div className="lg:hidden border-t border-border bg-bg-card px-4 py-3 space-y-2 transition-colors">
             <div className="pb-2 border-b border-border text-xs text-text-muted">
               Signed in as <span className="font-medium text-text-main">{user?.email}</span>
             </div>
