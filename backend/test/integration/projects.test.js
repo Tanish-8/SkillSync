@@ -695,6 +695,121 @@ describe('SkillSync Projects API - Integration Tests', () => {
       const data = await res.json();
       assert.equal(data.error, 'Project not found');
     });
+
+    it('rejects explicit null values for each field with HTTP 400 without modifying DB', async () => {
+      const fieldsToTest = [
+        { field: 'title', payload: { title: null }, expectedMsg: 'title cannot be null' },
+        { field: 'description', payload: { description: null }, expectedMsg: 'description cannot be null' },
+        { field: 'requiredSkills', payload: { requiredSkills: null }, expectedMsg: 'requiredSkills cannot be null' },
+        { field: 'timeSlots', payload: { timeSlots: null }, expectedMsg: 'timeSlots cannot be null' },
+        { field: 'goals', payload: { goals: null }, expectedMsg: 'goals cannot be null' },
+        { field: 'timeline', payload: { timeline: null }, expectedMsg: 'timeline cannot be null' },
+        { field: 'workingStyle', payload: { workingStyle: null }, expectedMsg: 'workingStyle cannot be null' },
+        { field: 'status', payload: { status: null }, expectedMsg: 'status cannot be null' },
+      ];
+
+      // Snapshot the project document before null update attempts
+      const beforeDoc = await Project.findById(alphaProjectId).lean();
+
+      for (const { field, payload, expectedMsg } of fieldsToTest) {
+        const res = await fetch(`${baseUrl}/api/projects/${alphaProjectId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', Cookie: userACookie },
+          body: JSON.stringify(payload),
+        });
+
+        assert.equal(res.status, 400, `Expected 400 for null ${field}`);
+        const data = await res.json();
+        assert.equal(data.error, expectedMsg, `Expected error message "${expectedMsg}" for ${field}`);
+
+        // Verify that the persisted project in MongoDB was NOT modified
+        const currentDoc = await Project.findById(alphaProjectId).lean();
+        assert.deepEqual(
+          currentDoc.title,
+          beforeDoc.title,
+          `Persisted title was modified when sending null ${field}`
+        );
+        assert.deepEqual(
+          currentDoc.description,
+          beforeDoc.description,
+          `Persisted description was modified when sending null ${field}`
+        );
+        assert.deepEqual(
+          currentDoc.requiredSkills.map((s) => ({ name: s.name, minLevel: s.minLevel })),
+          beforeDoc.requiredSkills.map((s) => ({ name: s.name, minLevel: s.minLevel })),
+          `Persisted requiredSkills was modified when sending null ${field}`
+        );
+        assert.deepEqual(
+          currentDoc.timeSlots,
+          beforeDoc.timeSlots,
+          `Persisted timeSlots was modified when sending null ${field}`
+        );
+        assert.deepEqual(
+          currentDoc.goals,
+          beforeDoc.goals,
+          `Persisted goals was modified when sending null ${field}`
+        );
+        assert.deepEqual(
+          currentDoc.timeline,
+          beforeDoc.timeline,
+          `Persisted timeline was modified when sending null ${field}`
+        );
+        assert.deepEqual(
+          currentDoc.workingStyle,
+          beforeDoc.workingStyle,
+          `Persisted workingStyle was modified when sending null ${field}`
+        );
+        assert.deepEqual(
+          currentDoc.status,
+          beforeDoc.status,
+          `Persisted status was modified when sending null ${field}`
+        );
+      }
+    });
+
+    it('allows explicitly empty arrays for requiredSkills, timeSlots, and goals in PATCH with HTTP 200', async () => {
+      const res = await fetch(`${baseUrl}/api/projects/${alphaProjectId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Cookie: userACookie },
+        body: JSON.stringify({
+          requiredSkills: [],
+          timeSlots: [],
+          goals: [],
+        }),
+      });
+
+      assert.equal(res.status, 200);
+      const data = await res.json();
+      assert.deepEqual(data.project.requiredSkills, []);
+      assert.deepEqual(data.project.timeSlots, []);
+      assert.deepEqual(data.project.goals, []);
+
+      // Verify DB persistence
+      const currentDoc = await Project.findById(alphaProjectId);
+      assert.deepEqual(currentDoc.requiredSkills, []);
+      assert.deepEqual(currentDoc.timeSlots, []);
+      assert.deepEqual(currentDoc.goals, []);
+    });
+
+    it('keeps omitted fields unchanged during partial PATCH update', async () => {
+      const originalDoc = await Project.findById(alphaProjectId).lean();
+
+      const res = await fetch(`${baseUrl}/api/projects/${alphaProjectId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Cookie: userACookie },
+        body: JSON.stringify({
+          timeline: 'Summer 2026 Intensive',
+        }),
+      });
+
+      assert.equal(res.status, 200);
+      const data = await res.json();
+      assert.equal(data.project.timeline, 'Summer 2026 Intensive');
+      assert.equal(data.project.title, originalDoc.title);
+      assert.equal(data.project.description, originalDoc.description);
+      assert.equal(data.project.workingStyle, originalDoc.workingStyle);
+      assert.equal(data.project.status, originalDoc.status);
+    });
   });
 
   // ==========================================================================

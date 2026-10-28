@@ -70,17 +70,27 @@ export function validateProjectFields(body, isUpdate = false) {
     return 'At least one field must be provided for update';
   }
 
-  // 3. On creation, check required fields
+  // 3. Reject explicit null or undefined values for any supplied field
+  for (const [key, value] of Object.entries(body)) {
+    if (value === null) {
+      return `${key} cannot be null`;
+    }
+    if (value === undefined) {
+      return `${key} cannot be undefined`;
+    }
+  }
+
+  // 4. On creation, check required fields
   if (!isUpdate) {
     for (const field of REQUIRED_PROJECT_FIELDS) {
-      if (!(field in body) || body[field] === null || body[field] === undefined) {
+      if (!(field in body)) {
         return `Missing required field: ${field}`;
       }
     }
   }
 
-  // 4. Validate title
-  if ('title' in body && body.title !== null && body.title !== undefined) {
+  // 5. Validate title
+  if ('title' in body) {
     if (typeof body.title !== 'string') {
       return 'title must be a string';
     }
@@ -90,8 +100,8 @@ export function validateProjectFields(body, isUpdate = false) {
     }
   }
 
-  // 5. Validate description
-  if ('description' in body && body.description !== null && body.description !== undefined) {
+  // 6. Validate description
+  if ('description' in body) {
     if (typeof body.description !== 'string') {
       return 'description must be a string';
     }
@@ -101,8 +111,8 @@ export function validateProjectFields(body, isUpdate = false) {
     }
   }
 
-  // 6. Validate requiredSkills
-  if ('requiredSkills' in body && body.requiredSkills !== null && body.requiredSkills !== undefined) {
+  // 7. Validate requiredSkills
+  if ('requiredSkills' in body) {
     if (!Array.isArray(body.requiredSkills)) {
       return 'requiredSkills must be an array of skill requirements';
     }
@@ -115,6 +125,7 @@ export function validateProjectFields(body, isUpdate = false) {
         return `Unexpected property in required skill: ${extraKeys.join(', ')}`;
       }
       if (
+        sk.name === null ||
         typeof sk.name !== 'string' ||
         sk.name.trim().length === 0 ||
         sk.name.trim().length > 70
@@ -122,6 +133,7 @@ export function validateProjectFields(body, isUpdate = false) {
         return 'Each required skill must have a non-empty name up to 70 characters';
       }
       if (
+        sk.minLevel === null ||
         typeof sk.minLevel !== 'number' ||
         !Number.isInteger(sk.minLevel) ||
         sk.minLevel < 1 ||
@@ -132,22 +144,22 @@ export function validateProjectFields(body, isUpdate = false) {
     }
   }
 
-  // 7. Validate timeSlots
-  if ('timeSlots' in body && body.timeSlots !== null && body.timeSlots !== undefined) {
+  // 8. Validate timeSlots
+  if ('timeSlots' in body) {
     if (!Array.isArray(body.timeSlots) || !body.timeSlots.every((s) => typeof s === 'string')) {
       return 'timeSlots must be an array of string slot identifiers';
     }
   }
 
-  // 8. Validate goals
-  if ('goals' in body && body.goals !== null && body.goals !== undefined) {
+  // 9. Validate goals
+  if ('goals' in body) {
     if (!Array.isArray(body.goals) || !body.goals.every((g) => typeof g === 'string')) {
       return 'goals must be an array of string tags';
     }
   }
 
-  // 9. Validate timeline
-  if ('timeline' in body && body.timeline !== null && body.timeline !== undefined) {
+  // 10. Validate timeline
+  if ('timeline' in body) {
     if (
       typeof body.timeline !== 'string' ||
       body.timeline.trim().length === 0 ||
@@ -157,8 +169,8 @@ export function validateProjectFields(body, isUpdate = false) {
     }
   }
 
-  // 10. Validate workingStyle
-  if ('workingStyle' in body && body.workingStyle !== null && body.workingStyle !== undefined) {
+  // 11. Validate workingStyle
+  if ('workingStyle' in body) {
     if (
       typeof body.workingStyle !== 'string' ||
       !WORKING_STYLES.includes(body.workingStyle.trim().toLowerCase())
@@ -167,8 +179,8 @@ export function validateProjectFields(body, isUpdate = false) {
     }
   }
 
-  // 11. Validate status
-  if ('status' in body && body.status !== null && body.status !== undefined) {
+  // 12. Validate status
+  if ('status' in body) {
     if (
       typeof body.status !== 'string' ||
       !PROJECT_STATUSES.includes(body.status.trim().toLowerCase())
@@ -259,7 +271,6 @@ export async function createProject(req, res, next) {
     next(error);
   }
 }
-
 /**
  * GET /api/projects
  * Lists open projects, sorted newest first, with pagination.
@@ -301,7 +312,6 @@ export async function getOpenProjects(req, res, next) {
     next(error);
   }
 }
-
 /**
  * GET /api/projects/mine
  * Returns all projects owned by the authenticated user (both open and closed),
@@ -344,7 +354,6 @@ export async function getMyProjects(req, res, next) {
     next(error);
   }
 }
-
 /**
  * GET /api/projects/:id
  * Retrieves a single project document by its MongoDB ObjectId.
@@ -368,7 +377,6 @@ export async function getProjectById(req, res, next) {
     next(error);
   }
 }
-
 /**
  * PATCH /api/projects/:id
  * Updates an existing project. Only the project owner is permitted.
@@ -435,7 +443,6 @@ export async function updateProject(req, res, next) {
     next(error);
   }
 }
-
 /**
  * DELETE /api/projects/:id
  * Deletes an existing project. Only the project owner is permitted.
