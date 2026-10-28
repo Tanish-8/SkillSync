@@ -12,6 +12,11 @@ import {
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import {
+  validateEmail,
+  validateRegistrationEmail,
+  validateSignInEmail,
+} from '../utils/emailValidation';
 
 export function AuthPage({ theme, toggleTheme }) {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -363,15 +368,6 @@ export function AuthPage({ theme, toggleTheme }) {
   };
 
   // Validation Helpers
-  const validateEmail = (email) => {
-    if (!email.trim()) return 'Institutional email is required.';
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email.trim())) {
-      return 'Please enter a valid university email address.';
-    }
-    return null;
-  };
-
   const validatePassword = (pass) => {
     if (!pass) return 'Password is required.';
     if (pass.length < 8) return 'Password must be at least 8 characters long.';
@@ -384,7 +380,7 @@ export function AuthPage({ theme, toggleTheme }) {
     setSignInFeedback(null);
     const errors = {};
 
-    const emailErr = validateEmail(signInEmail);
+    const emailErr = validateSignInEmail(signInEmail);
     if (emailErr) errors.email = emailErr;
 
     const passErr = validatePassword(signInPassword);
@@ -412,7 +408,7 @@ export function AuthPage({ theme, toggleTheme }) {
       errors.name = 'Full name is required (minimum 2 characters).';
     }
 
-    const emailErr = validateEmail(signUpEmail);
+    const emailErr = validateRegistrationEmail(signUpEmail);
     if (emailErr) errors.email = emailErr;
 
     const passErr = validatePassword(signUpPassword);
@@ -423,9 +419,9 @@ export function AuthPage({ theme, toggleTheme }) {
     if (Object.keys(errors).length === 0) {
       setSignUpFeedback({
         type: 'info',
-        title: 'Phase 3A Registration Validated',
+        title: 'Phase 3A Registration Format Validated',
         message:
-          'Student details verified. Database persistence and account creation will be activated when MongoDB and Mongoose schemas are connected in Phase 3B. No account has been created.',
+          'Email format and registration fields validated on the client. Database persistence and account creation will be activated when the authentication backend is connected in Phase 3B. No account has been created.',
       });
     }
   };
@@ -536,12 +532,12 @@ export function AuthPage({ theme, toggleTheme }) {
                 <Input
                   id="signup-email"
                   type="email"
-                  label="Institutional Email"
-                  placeholder="student@university.edu"
+                  label="Email Address"
+                  placeholder="name@example.com"
                   value={signUpEmail}
                   onChange={(e) => setSignUpEmail(e.target.value)}
                   error={signUpErrors.email}
-                  hint="Higher education domain email"
+                  hint="Use an email address you can access."
                   required
                 />
 
@@ -644,8 +640,8 @@ export function AuthPage({ theme, toggleTheme }) {
                 <Input
                   id="signin-email"
                   type="email"
-                  label="Institutional Email"
-                  placeholder="student@university.edu"
+                  label="Email Address"
+                  placeholder="name@example.com"
                   value={signInEmail}
                   onChange={(e) => setSignInEmail(e.target.value)}
                   error={signInErrors.email}
