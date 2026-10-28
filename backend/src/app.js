@@ -4,6 +4,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import healthRoutes from './routes/health.routes.js';
 import authRoutes from './routes/auth.routes.js';
+import matchingRoutes from './routes/matching.routes.js';
 import { checkOrigin } from './middleware/origin.middleware.js';
 import { errorHandler } from './middleware/error.middleware.js';
 
@@ -32,6 +33,7 @@ app.use(cookieParser());
 // 5. API Routes
 app.use('/api', healthRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/matching', matchingRoutes);
 
 // 6. Fallback 404 handler for undefined API routes
 app.use('/api/*', (req, res) => {
