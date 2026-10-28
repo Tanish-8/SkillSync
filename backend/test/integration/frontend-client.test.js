@@ -5,6 +5,8 @@ import mongoose from 'mongoose';
 import app from '../../src/app.js';
 import User from '../../src/models/User.js';
 import Project from '../../src/models/Project.js';
+import StudentProfile from '../../src/models/StudentProfile.js';
+import CollaborationRequest from '../../src/models/CollaborationRequest.js';
 import { connectDB, closeDB } from '../../src/config/db.js';
 
 describe('Frontend API Client & Auth Integration Tests', () => {
@@ -21,6 +23,8 @@ describe('Frontend API Client & Auth Integration Tests', () => {
     await connectDB(TEST_DB_URI);
     await User.deleteMany({});
     await Project.deleteMany({});
+    await StudentProfile.deleteMany({});
+    await CollaborationRequest.deleteMany({});
 
     server = http.createServer(app);
     await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
@@ -32,6 +36,8 @@ describe('Frontend API Client & Auth Integration Tests', () => {
     if (mongoose.connection.readyState === 1) {
       await User.deleteMany({});
       await Project.deleteMany({});
+      await StudentProfile.deleteMany({});
+      await CollaborationRequest.deleteMany({});
       await closeDB();
     }
     if (server) {
@@ -321,6 +327,140 @@ describe('Frontend API Client & Auth Integration Tests', () => {
     assert.ok(Array.isArray(data.recommendations));
     assert.ok(data.completeness !== undefined);
     assert.ok(data.pagination !== undefined);
+  });
+
+  let collabRequestId = null;
+  let bobUserId = null;
+  let bobUserCookie = null;
+  let bobProjectId = null;
+
+  it('15. sendCollaborationRequest: creates request with snapshot', async () => {
+    // 1. Register Bob
+    const regBob = await fetch(`${clientApiUrl}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Origin: 'http://localhost:5173' },
+      body: JSON.stringify({
+        name: 'Bob Developer',
+        email: 'bob.dev@iitd.ac.in',
+        password: 'ValidPassword123!',
+      }),
+    });
+    const bobData = await regBob.json();
+    bobUserId = bobData.user.id;
+    bobUserCookie = regBob.headers.get('set-cookie').split(';')[0];
+
+    // 2. Create Samantha's profile
+    const samProfile = await fetch(`${clientApiUrl}/profile/me`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: projectCookie,
+        Origin: 'http://localhost:5173',
+      },
+      body: JSON.stringify({
+        bio: 'Samantha Full Stack Student',
+        skills: [{ name: 'React', level: 4 }],
+        timeSlots: ['mon_morning', 'wed_afternoon'],
+        goals: ['portfolio'],
+        timeline: '3 months',
+        workingStyle: 'synchronous',
+        learningStyle: 'hands_on',
+      }),
+    });
+    assert.ok([200, 201].includes(samProfile.status));
+
+    // 3. Bob creates an open project
+    const projRes = await fetch(`${clientApiUrl}/projects`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: bobUserCookie,
+        Origin: 'http://localhost:5173',
+      },
+      body: JSON.stringify({
+        title: 'Open Source Vision Tool',
+        description: 'Building modern student computer vision tooling with React frontend.',
+        requiredSkills: [{ name: 'React', minLevel: 3 }],
+        timeSlots: ['mon_morning'],
+        goals: ['portfolio'],
+        timeline: '3 months',
+        workingStyle: 'synchronous',
+        preferredLearningStyle: 'hands_on',
+      }),
+    });
+    assert.equal(projRes.status, 201);
+    const projData = await projRes.json();
+    bobProjectId = projData.project.id;
+
+    // 4. Samantha sends request
+    const reqRes = await fetch(`${clientApiUrl}/collaboration-requests`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: projectCookie,
+        Origin: 'http://localhost:5173',
+      },
+      body: JSON.stringify({
+        mode: 'project',
+        projectId: bobProjectId,
+        message: 'Hi Bob, excited to work together.',
+      }),
+    });
+    assert.equal(reqRes.status, 201);
+    const reqData = await reqRes.json();
+    collabRequestId = reqData.id;
+    assert.equal(reqData.mode, 'project');
+    assert.equal(reqData.status, 'pending');
+    assert.ok(reqData.compatibilitySnapshot);
+  });
+
+  it('16. getSentCollaborationRequests & getReceivedCollaborationRequests: lists requests with pagination', async () => {
+    // Samantha gets sent requests
+    const sentRes = await fetch(`${clientApiUrl}/collaboration-requests/sent?page=1&limit=5`, {
+      headers: { Cookie: projectCookie },
+    });
+    assert.equal(sentRes.status, 200);
+    const sentData = await sentRes.json();
+    assert.ok(Array.isArray(sentData.requests));
+    assert.equal(sentData.requests.length, 1);
+    assert.equal(sentData.requests[0].id, collabRequestId);
+
+    // Bob gets received requests
+    const recvRes = await fetch(`${clientApiUrl}/collaboration-requests/received?page=1&limit=5`, {
+      headers: { Cookie: bobUserCookie },
+    });
+    assert.equal(recvRes.status, 200);
+    const recvData = await recvRes.json();
+    assert.ok(Array.isArray(recvData.requests));
+    assert.equal(recvData.requests.length, 1);
+    assert.equal(recvData.requests[0].id, collabRequestId);
+  });
+
+  it('17. respondToCollaborationRequest & getCollaborationRequest: accepts request', async () => {
+    // Bob accepts
+    const respRes = await fetch(
+      `${clientApiUrl}/collaboration-requests/${collabRequestId}/respond`,
+      {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Cookie: bobUserCookie,
+          Origin: 'http://localhost:5173',
+        },
+        body: JSON.stringify({ action: 'accept' }),
+      }
+    );
+    assert.equal(respRes.status, 200);
+    const respData = await respRes.json();
+    assert.equal(respData.status, 'accepted');
+
+    // Samantha verifies request by ID
+    const getRes = await fetch(`${clientApiUrl}/collaboration-requests/${collabRequestId}`, {
+      headers: { Cookie: projectCookie },
+    });
+    assert.equal(getRes.status, 200);
+    const getData = await getRes.json();
+    assert.equal(getData.status, 'accepted');
   });
 });
 

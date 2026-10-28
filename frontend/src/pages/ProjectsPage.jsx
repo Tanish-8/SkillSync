@@ -24,6 +24,7 @@ import {
   Layers,
   GraduationCap,
   Sparkles,
+  Send,
 } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
@@ -38,7 +39,9 @@ import {
   updateProject,
   deleteProject,
   getProjectRecommendations,
+  getSentCollaborationRequests,
 } from '../api/client';
+import { SendCollaborationRequestModal } from '../components/matching/SendCollaborationRequestModal';
 import { FactorBreakdown } from '../components/matching/FactorBreakdown';
 import { WhyThisMatch } from '../components/matching/WhyThisMatch';
 import { IncompleteProfileBanner } from '../components/matching/IncompleteProfileBanner';
@@ -143,6 +146,31 @@ export function ProjectsPage() {
   const [loadingRecs, setLoadingRecs] = useState(true);
   const [recError, setRecError] = useState(null);
   const [recCompleteness, setRecCompleteness] = useState(null);
+
+  // 2c. Collaboration Request State (Phase 7)
+  const [sentRequestProjectIds, setSentRequestProjectIds] = useState(new Set());
+  const [collabModalTarget, setCollabModalTarget] = useState(null);
+
+  useEffect(() => {
+    if (user) {
+      getSentCollaborationRequests({ status: 'pending' })
+        .then((res) => {
+          if (res?.requests) {
+            const ids = new Set(
+              res.requests
+                .filter((r) => r.mode === 'project' && r.projectId)
+                .map((r) =>
+                  typeof r.projectId === 'object'
+                    ? r.projectId.id || r.projectId._id
+                    : r.projectId
+                )
+            );
+            setSentRequestProjectIds(ids);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [user]);
 
   // 3. Open Projects State
   const [openProjects, setOpenProjects] = useState([]);
@@ -937,7 +965,7 @@ export function ProjectsPage() {
                       </div>
 
                       {/* Card Action */}
-                      <div className="pt-3 border-t border-border flex items-center justify-between">
+                      <div className="pt-3 border-t border-border flex items-center justify-between gap-2">
                         <Button
                           size="sm"
                           variant="outline"
@@ -945,11 +973,31 @@ export function ProjectsPage() {
                           className="text-xs inline-flex items-center gap-1.5"
                         >
                           <Eye className="w-3.5 h-3.5" />
-                          <span>Inspect Project Details</span>
+                          <span>Inspect</span>
                         </Button>
-                        <span className="text-[10px] text-text-muted">
-                          {proj.timeSlots?.length || 0} meeting window(s)
-                        </span>
+
+                        {sentRequestProjectIds.has(proj.id) ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold bg-amber-500/10 text-amber-500 border border-amber-500/30">
+                            <Clock className="w-3 h-3" />
+                            <span>Request Pending</span>
+                          </span>
+                        ) : (
+                          <Button
+                            size="sm"
+                            onClick={() =>
+                              setCollabModalTarget({
+                                projectId: proj.id,
+                                projectTitle: proj.title,
+                                ownerName: proj.owner?.name,
+                                score: rec.score,
+                              })
+                            }
+                            className="text-xs inline-flex items-center gap-1.5"
+                          >
+                            <Send className="w-3.5 h-3.5" />
+                            <span>Request to Collaborate</span>
+                          </Button>
+                        )}
                       </div>
                     </Card>
                   );
@@ -1986,6 +2034,29 @@ export function ProjectsPage() {
                     </Button>
                   </>
                 )}
+                {user?.id !== selectedProject.ownerId && selectedProject.status === 'open' && (
+                  sentRequestProjectIds.has(selectedProject.id) ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold bg-amber-500/10 text-amber-500 border border-amber-500/30">
+                      <Clock className="w-3 h-3" />
+                      <span>Request Pending</span>
+                    </span>
+                  ) : (
+                    <Button
+                      size="sm"
+                      onClick={() =>
+                        setCollabModalTarget({
+                          projectId: selectedProject.id,
+                          projectTitle: selectedProject.title,
+                          ownerName: selectedProject.owner?.name,
+                        })
+                      }
+                      className="text-xs inline-flex items-center gap-1.5"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      <span>Request to Collaborate</span>
+                    </Button>
+                  )
+                )}
                 <Button
                   size="sm"
                   onClick={() => setSelectedProject(null)}
@@ -1999,6 +2070,19 @@ export function ProjectsPage() {
           </div>
         </div>
       )}
+
+      {/* Collaboration Request Modal (Phase 7) */}
+      <SendCollaborationRequestModal
+        isOpen={Boolean(collabModalTarget)}
+        onClose={() => setCollabModalTarget(null)}
+        onSuccess={(newReq) => {
+          if (newReq?.projectId) {
+            setSentRequestProjectIds((prev) => new Set([...prev, newReq.projectId]));
+          }
+        }}
+        mode="project"
+        target={collabModalTarget}
+      />
 
       {/* ========================================================================= */}
       {/* 6. EDIT PROJECT MODAL                                                    */}

@@ -35,3 +35,23 @@ export const matchingRateLimiter = rateLimit({
     return process.env.NODE_ENV === 'test' && !req.headers['x-test-rate-limit'];
   },
 });
+
+/**
+ * Rate limiter for collaboration request endpoints.
+ * Protects server resources and avoids request spam.
+ */
+export const collaborationRequestRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes window
+  limit: (req) =>
+    process.env.COLLAB_REQUEST_RATE_LIMIT_MAX
+      ? Number(process.env.COLLAB_REQUEST_RATE_LIMIT_MAX)
+      : 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: 'Too many collaboration requests. Please try again later.',
+  },
+  skip: (req) => {
+    return process.env.NODE_ENV === 'test' && !req.headers['x-test-rate-limit'];
+  },
+});

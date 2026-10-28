@@ -291,3 +291,88 @@ export async function getSkillSwapRecommendations({ page, limit } = {}) {
     method: 'GET',
   });
 }
+
+/**
+ * Send a collaboration request (project, study_buddy, or skillswap).
+ *
+ * @param {{ mode: 'project'|'study_buddy'|'skillswap', projectId?: string, recipientId?: string, message?: string }} data
+ * @returns {Promise<Object>} Safe collaboration request with compatibility snapshot
+ */
+export async function sendCollaborationRequest({ mode, projectId, recipientId, message }) {
+  return request('/collaboration-requests', {
+    method: 'POST',
+    body: JSON.stringify({ mode, projectId, recipientId, message }),
+  });
+}
+
+/**
+ * Retrieve sent collaboration requests created by the authenticated user.
+ *
+ * @param {{ page?: number, limit?: number, status?: string }} [options]
+ * @returns {Promise<{ requests: Array<Object>, pagination: Object }>}
+ */
+export async function getSentCollaborationRequests({ page, limit, status } = {}) {
+  const params = new URLSearchParams();
+  if (page !== undefined && page !== null) params.append('page', String(page));
+  if (limit !== undefined && limit !== null) params.append('limit', String(limit));
+  if (status !== undefined && status !== null && status !== 'all') params.append('status', String(status));
+  const query = params.toString() ? `?${params.toString()}` : '';
+  return request(`/collaboration-requests/sent${query}`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * Retrieve received collaboration requests directed to the authenticated user.
+ *
+ * @param {{ page?: number, limit?: number, status?: string }} [options]
+ * @returns {Promise<{ requests: Array<Object>, pagination: Object }>}
+ */
+export async function getReceivedCollaborationRequests({ page, limit, status } = {}) {
+  const params = new URLSearchParams();
+  if (page !== undefined && page !== null) params.append('page', String(page));
+  if (limit !== undefined && limit !== null) params.append('limit', String(limit));
+  if (status !== undefined && status !== null && status !== 'all') params.append('status', String(status));
+  const query = params.toString() ? `?${params.toString()}` : '';
+  return request(`/collaboration-requests/received${query}`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * Retrieve a single collaboration request by ID.
+ *
+ * @param {string} requestId
+ * @returns {Promise<Object>}
+ */
+export async function getCollaborationRequest(requestId) {
+  return request(`/collaboration-requests/${requestId}`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * Accept or reject a received collaboration request (recipient only).
+ *
+ * @param {string} requestId
+ * @param {'accept'|'reject'} action
+ * @returns {Promise<Object>}
+ */
+export async function respondToCollaborationRequest(requestId, action) {
+  return request(`/collaboration-requests/${requestId}/respond`, {
+    method: 'PATCH',
+    body: JSON.stringify({ action }),
+  });
+}
+
+/**
+ * Cancel a pending collaboration request (requester only).
+ *
+ * @param {string} requestId
+ * @returns {Promise<Object>}
+ */
+export async function cancelCollaborationRequest(requestId) {
+  return request(`/collaboration-requests/${requestId}/cancel`, {
+    method: 'PATCH',
+  });
+}

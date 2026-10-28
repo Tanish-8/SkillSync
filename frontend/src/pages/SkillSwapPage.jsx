@@ -16,17 +16,26 @@ import {
   ChevronRight,
   CheckCircle2,
   GraduationCap,
+  Send,
 } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
-import { getProfile, getSkillSwapRecommendations } from '../api/client';
+import {
+  getProfile,
+  getSkillSwapRecommendations,
+  getSentCollaborationRequests,
+} from '../api/client';
 import { FactorBreakdown } from '../components/matching/FactorBreakdown';
 import { WhyThisMatch } from '../components/matching/WhyThisMatch';
 import { IncompleteProfileBanner } from '../components/matching/IncompleteProfileBanner';
+import { SendCollaborationRequestModal } from '../components/matching/SendCollaborationRequestModal';
 import { getScoreTier, formatTimeSlot } from '../utils/matchingHelpers';
+import { useAuth } from '../context/AuthContext';
 
 export function SkillSwapPage() {
+  const { user } = useAuth();
+
   // 1. Profile inputs context
   const [profile, setProfile] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
@@ -43,6 +52,31 @@ export function SkillSwapPage() {
   });
   const [loadingRecs, setLoadingRecs] = useState(true);
   const [recError, setRecError] = useState(null);
+
+  // 3. Collaboration Request State (Phase 7)
+  const [sentRequestPartnerIds, setSentRequestPartnerIds] = useState(new Set());
+  const [collabModalTarget, setCollabModalTarget] = useState(null);
+
+  useEffect(() => {
+    if (user) {
+      getSentCollaborationRequests({ status: 'pending' })
+        .then((res) => {
+          if (res?.requests) {
+            const ids = new Set(
+              res.requests
+                .filter((r) => r.mode === 'skillswap' && r.recipientId)
+                .map((r) =>
+                  typeof r.recipientId === 'object'
+                    ? r.recipientId.id || r.recipientId._id
+                    : r.recipientId
+                )
+            );
+            setSentRequestPartnerIds(ids);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [user]);
 
   // Load user profile inventory
   useEffect(() => {
@@ -611,13 +645,34 @@ export function SkillSwapPage() {
                     <WhyThisMatch reasons={rec.reasons} />
                   </div>
 
-                  {/* Card Safe Footer */}
-                  <div className="pt-3 border-t border-border flex items-center justify-between text-[11px] text-text-muted">
-                    <span className="inline-flex items-center gap-1 text-[10px]">
+                  {/* Card Actions Footer */}
+                  <div className="pt-3 border-t border-border flex items-center justify-between gap-2">
+                    <span className="inline-flex items-center gap-1 text-[10px] text-text-muted">
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                      <span>Verified Bilateral Reciprocal Match</span>
+                      <span>Verified Reciprocal Match</span>
                     </span>
-                    <span className="text-[10px]">Skill exchange candidate</span>
+
+                    {sentRequestPartnerIds.has(student.userId) ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold bg-amber-500/10 text-amber-500 border border-amber-500/30">
+                        <Clock className="w-3 h-3" />
+                        <span>Request Pending</span>
+                      </span>
+                    ) : (
+                      <Button
+                        size="sm"
+                        onClick={() =>
+                          setCollabModalTarget({
+                            recipientId: student.userId,
+                            studentName: student.name,
+                            score: rec.score,
+                          })
+                        }
+                        className="text-xs inline-flex items-center gap-1.5"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                        <span>Propose SkillSwap</span>
+                      </Button>
+                    )}
                   </div>
                 </Card>
               );
@@ -656,6 +711,19 @@ export function SkillSwapPage() {
           </div>
         )}
       </section>
+
+      {/* Collaboration Request Modal (Phase 7) */}
+      <SendCollaborationRequestModal
+        isOpen={Boolean(collabModalTarget)}
+        onClose={() => setCollabModalTarget(null)}
+        onSuccess={(newReq) => {
+          if (newReq?.recipientId) {
+            setSentRequestPartnerIds((prev) => new Set([...prev, newReq.recipientId]));
+          }
+        }}
+        mode="skillswap"
+        target={collabModalTarget}
+      />
     </div>
   );
 }

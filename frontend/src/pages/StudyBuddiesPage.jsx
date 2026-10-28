@@ -14,17 +14,26 @@ import {
   ChevronRight,
   User,
   Clock,
+  Send,
 } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
-import { getProfile, getStudyBuddyRecommendations } from '../api/client';
+import {
+  getProfile,
+  getStudyBuddyRecommendations,
+  getSentCollaborationRequests,
+} from '../api/client';
 import { FactorBreakdown } from '../components/matching/FactorBreakdown';
 import { WhyThisMatch } from '../components/matching/WhyThisMatch';
 import { IncompleteProfileBanner } from '../components/matching/IncompleteProfileBanner';
+import { SendCollaborationRequestModal } from '../components/matching/SendCollaborationRequestModal';
 import { getScoreTier, formatTimeSlot } from '../utils/matchingHelpers';
+import { useAuth } from '../context/AuthContext';
 
 export function StudyBuddiesPage() {
+  const { user } = useAuth();
+
   // 1. Profile inputs context
   const [profile, setProfile] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
@@ -41,6 +50,31 @@ export function StudyBuddiesPage() {
   });
   const [loadingRecs, setLoadingRecs] = useState(true);
   const [recError, setRecError] = useState(null);
+
+  // 3. Collaboration Request State (Phase 7)
+  const [sentRequestStudentIds, setSentRequestStudentIds] = useState(new Set());
+  const [collabModalTarget, setCollabModalTarget] = useState(null);
+
+  useEffect(() => {
+    if (user) {
+      getSentCollaborationRequests({ status: 'pending' })
+        .then((res) => {
+          if (res?.requests) {
+            const ids = new Set(
+              res.requests
+                .filter((r) => r.mode === 'study_buddy' && r.recipientId)
+                .map((r) =>
+                  typeof r.recipientId === 'object'
+                    ? r.recipientId.id || r.recipientId._id
+                    : r.recipientId
+                )
+            );
+            setSentRequestStudentIds(ids);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [user]);
 
   // Load user profile inputs
   useEffect(() => {
@@ -449,13 +483,35 @@ export function StudyBuddiesPage() {
                     <WhyThisMatch reasons={rec.reasons} />
                   </div>
 
-                  {/* Candidate Safe Footer */}
-                  <div className="pt-3 border-t border-border flex items-center justify-between text-[11px] text-text-muted">
-                    <span className="inline-flex items-center gap-1 text-[10px]">
+                  {/* Candidate Actions Footer */}
+                  <div className="pt-3 border-t border-border flex items-center justify-between gap-2">
+                    <span className="inline-flex items-center gap-1 text-[10px] text-text-muted">
                       <User className="w-3 h-3 text-text-muted" />
-                      <span>Verified Student Candidate</span>
+                      <span>Verified Candidate</span>
                     </span>
-                    <span className="text-[10px]">Individual study candidate</span>
+
+                    {sentRequestStudentIds.has(student.userId) ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold bg-amber-500/10 text-amber-500 border border-amber-500/30">
+                        <Clock className="w-3 h-3" />
+                        <span>Request Pending</span>
+                      </span>
+                    ) : (
+                      <Button
+                        size="sm"
+                        onClick={() =>
+                          setCollabModalTarget({
+                            recipientId: student.userId,
+                            studentName: student.name,
+                            score: rec.score,
+                            courseCode: student.courseCode,
+                          })
+                        }
+                        className="text-xs inline-flex items-center gap-1.5"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                        <span>Send Study Buddy Request</span>
+                      </Button>
+                    )}
                   </div>
                 </Card>
               );
@@ -494,6 +550,19 @@ export function StudyBuddiesPage() {
           </div>
         )}
       </section>
+
+      {/* Collaboration Request Modal (Phase 7) */}
+      <SendCollaborationRequestModal
+        isOpen={Boolean(collabModalTarget)}
+        onClose={() => setCollabModalTarget(null)}
+        onSuccess={(newReq) => {
+          if (newReq?.recipientId) {
+            setSentRequestStudentIds((prev) => new Set([...prev, newReq.recipientId]));
+          }
+        }}
+        mode="study_buddy"
+        target={collabModalTarget}
+      />
     </div>
   );
 }

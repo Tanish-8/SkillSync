@@ -10,6 +10,7 @@ import ProfilePage from './pages/ProfilePage';
 import ProjectsPage from './pages/ProjectsPage';
 import StudyBuddiesPage from './pages/StudyBuddiesPage';
 import SkillSwapPage from './pages/SkillSwapPage';
+import CollaborationRequestsPage from './pages/CollaborationRequestsPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 
@@ -46,6 +47,7 @@ function AppContent({ theme, toggleTheme }) {
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/study-buddies" element={<StudyBuddiesPage />} />
             <Route path="/skillswap" element={<SkillSwapPage />} />
+            <Route path="/requests" element={<CollaborationRequestsPage />} />
           </Route>
         </Routes>
       </div>

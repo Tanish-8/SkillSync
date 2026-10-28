@@ -6,6 +6,7 @@ import {
   Users,
   BookOpen,
   ArrowLeftRight,
+  Inbox,
   Sun,
   Moon,
   LogOut,
@@ -22,6 +23,7 @@ const WORKSPACE_NAV_ITEMS = [
   { path: '/projects', label: 'Projects', icon: Users },
   { path: '/study-buddies', label: 'Study Buddies', icon: BookOpen },
   { path: '/skillswap', label: 'SkillSwap', icon: ArrowLeftRight },
+  { path: '/requests', label: 'Requests', icon: Inbox },
 ];
 
 export function WorkspaceLayout({ theme, toggleTheme }) {
