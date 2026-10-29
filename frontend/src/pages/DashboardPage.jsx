@@ -17,6 +17,7 @@ import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { getProfile } from '../api/client';
+import { formatMissingFieldName } from '../utils/matchingHelpers';
 
 export function DashboardPage() {
   const { user } = useAuth();
@@ -173,8 +174,8 @@ export function DashboardPage() {
               </div>
               <p className="text-[11px] text-text-muted leading-relaxed">
                 {completeness?.project?.isComplete
-                  ? 'All 5 required project inputs declared (skills, timeSlots, goals, timeline, workingStyle).'
-                  : `Missing: ${completeness?.project?.missingFields?.join(', ') || 'required fields'}`}
+                  ? 'All 6 required project inputs declared (skills, timeSlots, goals, timeline, workingStyle, learningStyle).'
+                  : `Missing: ${completeness?.project?.missingFields?.map(formatMissingFieldName).join(', ') || 'required fields'}`}
               </p>
             </div>
 
@@ -195,8 +196,8 @@ export function DashboardPage() {
               </div>
               <p className="text-[11px] text-text-muted leading-relaxed">
                 {completeness?.study?.isComplete
-                  ? 'All 4 study inputs declared (courseCode, topics, timeSlots, learningPreferences).'
-                  : `Missing: ${completeness?.study?.missingFields?.join(', ') || 'required fields'}`}
+                  ? 'All 5 study inputs declared (courseCode, topics, timeSlots, learningPreferences, learningStyle).'
+                  : `Missing: ${completeness?.study?.missingFields?.map(formatMissingFieldName).join(', ') || 'required fields'}`}
               </p>
             </div>
 
@@ -217,8 +218,8 @@ export function DashboardPage() {
               </div>
               <p className="text-[11px] text-text-muted leading-relaxed">
                 {completeness?.skillswap?.isComplete
-                  ? 'All 4 SkillSwap inputs declared (offered skills, desiredSkills, timeSlots, weeklyHours).'
-                  : `Missing: ${completeness?.skillswap?.missingFields?.join(', ') || 'required fields'}`}
+                  ? 'All 5 SkillSwap inputs declared (offered skills, desiredSkills, timeSlots, weeklyHours, learningStyle).'
+                  : `Missing: ${completeness?.skillswap?.missingFields?.map(formatMissingFieldName).join(', ') || 'required fields'}`}
               </p>
             </div>
           </div>
@@ -232,7 +233,7 @@ export function DashboardPage() {
             Collaboration Tracks
           </h2>
           <span className="text-xs text-text-muted">
-            Matching APIs Implemented · Workspace Integration In Progress
+            Recommendations & Requests Active
           </span>
         </div>
 
@@ -253,13 +254,13 @@ export function DashboardPage() {
                   </Badge>
                 </div>
                 <p className="text-xs text-text-muted leading-relaxed">
-                  Manage your technical skills, weekly study cadence, curriculum details, and reciprocal tutoring preferences.
+                  Manage your academic background, skills, learning style, goals, project experience, and availability.
                 </p>
               </div>
             </div>
 
             <div className="pt-3 border-t border-border flex items-center justify-between text-xs">
-              <span className="text-text-muted">Student Data</span>
+              <span className="text-text-muted">Profile Management</span>
               <Link
                 to="/profile"
                 className="font-medium text-text-main hover:text-text-amber transition-colors inline-flex items-center gap-1"
@@ -282,17 +283,17 @@ export function DashboardPage() {
                     Project Teammates
                   </h3>
                   <Badge variant="outline" className="text-[10px]">
-                    Preview API Available
+                    Recommendations available
                   </Badge>
                 </div>
                 <p className="text-xs text-text-muted leading-relaxed">
-                  Deterministic compatibility scoring engine evaluates technical skills, schedules, and working styles via authenticated preview endpoints. In-dashboard team creation and project matching are in progress.
+                  Browse open project opportunities ranked against your saved profile, inspect compatibility factors, and send collaboration requests.
                 </p>
               </div>
             </div>
 
             <div className="pt-3 border-t border-border flex items-center justify-between text-xs">
-              <span className="text-text-amber font-medium">Project Persistence Pending</span>
+              <span className="text-text-muted font-medium">Project management available</span>
               <Link
                 to="/projects"
                 className="font-medium text-text-main hover:text-text-amber transition-colors inline-flex items-center gap-1"
@@ -315,17 +316,17 @@ export function DashboardPage() {
                     Study Buddies
                   </h3>
                   <Badge variant="outline" className="text-[10px]">
-                    Preview API Available
+                    Recommendations available
                   </Badge>
                 </div>
                 <p className="text-xs text-text-muted leading-relaxed">
-                  Curriculum alignment and study cadence scoring are active via backend preview endpoints. Interactive peer discovery and study squad formation within the dashboard are in progress.
+                  Discover study partners based on course overlap, learning style, schedule, academic level, and goals. Send and track study requests.
                 </p>
               </div>
             </div>
 
             <div className="pt-3 border-t border-border flex items-center justify-between text-xs">
-              <span className="text-text-amber font-medium">Discovery Integration Pending</span>
+              <span className="text-text-muted font-medium">Requests available</span>
               <Link
                 to="/study-buddies"
                 className="font-medium text-text-main hover:text-text-amber transition-colors inline-flex items-center gap-1"
@@ -348,17 +349,17 @@ export function DashboardPage() {
                     SkillSwap
                   </h3>
                   <Badge variant="outline" className="text-[10px]">
-                    Preview API Available
+                    Recommendations available
                   </Badge>
                 </div>
                 <p className="text-xs text-text-muted leading-relaxed">
-                  Reciprocal skill-exchange and availability scoring are available via authenticated preview endpoints. In-dashboard peer directory discovery and exchange coordination are in progress.
+                  Find partners with genuinely reciprocal teach-and-learn skills, review compatibility explanations, and propose a SkillSwap.
                 </p>
               </div>
             </div>
 
             <div className="pt-3 border-t border-border flex items-center justify-between text-xs">
-              <span className="text-text-amber font-medium">Discovery Integration Pending</span>
+              <span className="text-text-muted font-medium">Requests available</span>
               <Link
                 to="/skillswap"
                 className="font-medium text-text-main hover:text-text-amber transition-colors inline-flex items-center gap-1"

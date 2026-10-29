@@ -5,7 +5,6 @@ import {
   GraduationCap,
   Calendar,
   ArrowRight,
-  Sliders,
   Sparkles,
   Target,
   AlertCircle,
@@ -131,11 +130,8 @@ export function StudyBuddiesPage() {
       <section className="space-y-2">
         <div className="flex items-center gap-2">
           <span className="text-[11px] font-medium uppercase tracking-wider text-text-amber">
-            Collaboration Track
+            Study Partner Matching
           </span>
-          <Badge variant="outline" className="text-[10px]">
-            Recommendations Operational
-          </Badge>
         </div>
         <h1 className="font-serif text-2xl sm:text-3xl font-medium tracking-tight text-text-main">
           Course Study Partners & Exam Prep
@@ -145,24 +141,7 @@ export function StudyBuddiesPage() {
         </p>
       </section>
 
-      {/* 2. ARCHITECTURAL STATUS BANNER */}
-      <section className="rounded-lg border border-border bg-bg-section p-5 space-y-3">
-        <div className="flex items-center gap-2">
-          <Sliders className="w-4 h-4 text-accent" />
-          <h2 className="font-serif text-sm font-medium text-text-main">
-            Status: Database-Backed Study Partner Discovery Operational
-          </h2>
-        </div>
-        <p className="text-xs text-text-muted leading-relaxed max-w-3xl">
-          SkillSync calculates study partner recommendations deterministically across 5 calibrated factors from student database records at{' '}
-          <code className="text-[11px] bg-bg-card px-1.5 py-0.5 rounded border border-border text-text-main">
-            GET /api/matching/recommendations/study-buddies
-          </code>
-          . Compatibility percentages and grounded explanations evaluate Course & Subject Overlap (30%), Learning Style (25%), Shared Schedule (20%), Academic Stage (15%), and Goals (10%).
-        </p>
-      </section>
-
-      {/* 3. YOUR STUDY MATCHING INPUTS (Live Profile Context) */}
+      {/* 2. YOUR STUDY MATCHING INPUTS (Live Profile Context) */}
       <section className="space-y-4">
         <div className="flex items-baseline justify-between">
           <h2 className="font-serif text-lg font-medium text-text-main">

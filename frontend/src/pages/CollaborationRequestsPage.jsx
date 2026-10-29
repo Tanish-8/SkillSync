@@ -88,7 +88,9 @@ export function CollaborationRequestsPage() {
     try {
       const updated = await respondToCollaborationRequest(requestId, action);
       setActionSuccessMessage(
-        `Collaboration request ${action === 'accept' ? 'accepted' : 'declined'} successfully.`
+        action === 'accept'
+          ? 'Request accepted. You can coordinate next steps with the other student using your preferred communication tools. SkillSync does not yet manage team membership or session scheduling.'
+          : 'Collaboration request declined.'
       );
       setRequests((prev) =>
         prev.map((r) => (r.id === requestId ? { ...r, status: updated.status } : r))
@@ -291,7 +293,7 @@ export function CollaborationRequestsPage() {
               ? `There are no ${statusFilter} collaboration requests matching your filter.`
               : activeTab === 'received'
               ? 'When other students find your profile in recommendations, their invitations will appear here.'
-              : 'You have not sent any collaboration requests yet. Explore Projects, Study Buddies, or SkillSwap to connect.'}
+              : 'You have not sent any collaboration requests yet. Explore Projects, Study Buddies, or SkillSwap to find collaboration opportunities.'}
           </p>
         </Card>
       ) : (
@@ -403,9 +405,9 @@ export function CollaborationRequestsPage() {
                     <div className="p-3 rounded border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 text-xs flex items-start gap-2">
                       <Info className="w-4 h-4 shrink-0 mt-0.5" />
                       <div>
-                        <span className="font-semibold block">Collaboration Accepted</span>
+                        <span className="font-semibold block">Request Accepted</span>
                         <p className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-0.5">
-                          You are now connected! Coordinate meeting times and project workflows through your preferred student communication tools.
+                          Request accepted. You can coordinate next steps with the other student using your preferred communication tools. SkillSync does not yet manage team membership or session scheduling.
                         </p>
                       </div>
                     </div>
@@ -438,7 +440,7 @@ export function CollaborationRequestsPage() {
                           className="text-xs inline-flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
                         >
                           <Check className="w-3.5 h-3.5" />
-                          <span>Accept Invitation</span>
+                          <span>Accept Request</span>
                         </Button>
                       </>
                     )}

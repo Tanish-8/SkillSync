@@ -20,11 +20,39 @@ import { Badge } from '../components/ui/Badge';
 import { scrollToSection } from '../utils/scroll';
 
 // Coherent, realistic demonstration data for each matching context
+const computeWeightedTotal = (factors) =>
+  Math.round(factors.reduce((acc, f) => acc + (f.value * f.weight) / 100, 0));
+
+const PROJECT_FACTORS = [
+  { label: 'Skills Alignment (30%)', weight: 30, value: 90 },
+  { label: 'Goals Alignment (20%)', weight: 20, value: 85 },
+  { label: 'Relevant Project Experience (15%)', weight: 15, value: 80 },
+  { label: 'Academic Relevance (15%)', weight: 15, value: 90 },
+  { label: 'Availability Compatibility (10%)', weight: 10, value: 85 },
+  { label: 'Learning-Style Compatibility (10%)', weight: 10, value: 90 },
+];
+
+const STUDY_FACTORS = [
+  { label: 'Subject/Course Overlap (30%)', weight: 30, value: 95 },
+  { label: 'Learning-Style Compatibility (25%)', weight: 25, value: 92 },
+  { label: 'Shared Schedule (20%)', weight: 20, value: 85 },
+  { label: 'Academic-Level Compatibility (15%)', weight: 15, value: 90 },
+  { label: 'Goals Alignment (10%)', weight: 10, value: 90 },
+];
+
+const SKILLSWAP_FACTORS = [
+  { label: 'Reciprocal Teach/Want (40%)', weight: 40, value: 95 },
+  { label: 'Skill-Level Compatibility (20%)', weight: 20, value: 80 },
+  { label: 'Goals Alignment (15%)', weight: 15, value: 90 },
+  { label: 'Availability Compatibility (15%)', weight: 15, value: 90 },
+  { label: 'Learning-Style Compatibility (10%)', weight: 10, value: 90 },
+];
+
 const DEMO_CONTEXTS = {
   project: {
     id: 'project',
     title: 'Project Collaboration',
-    score: 88,
+    score: computeWeightedTotal(PROJECT_FACTORS),
     scoreLabel: 'Project Compatibility',
     candidate: {
       name: 'Marcus Vance',
@@ -38,25 +66,22 @@ const DEMO_CONTEXTS = {
       timing: 'Spring Semester Milestone Schedule',
       requiredStack: ['Node.js', 'PostgreSQL', 'Docker', 'REST API'],
     },
-    factors: [
-      { label: 'Technical Stack Alignment', value: 92 },
-      { label: 'Schedule & Timezone Overlap', value: 84 },
-      { label: 'Project Goal & Urgency Fit', value: 90 },
-      { label: 'Working Style (Async / Sync)', value: 85 },
-    ],
+    factors: PROJECT_FACTORS,
     reasons: [
-      'Both seeking to build backend infrastructure with Node.js and PostgreSQL.',
-      'Overlapping availability on Tuesday and Thursday evenings (5:00–8:00 PM).',
-      'Complementary roles: Marcus focuses on data modeling and indexing; you lead client services.',
-      'Matching target commitment of 8–10 hours per week through final milestone submission.',
+      'Strong technical alignment: declared Node.js and PostgreSQL proficiencies match project stack.',
+      'Shared milestones: both students target portfolio-ready capstone completion.',
+      'Past project experience in backend architecture directly relevant to the project scope.',
+      'Academic relevance: shared background in Computer Science and Systems Architecture.',
+      'Overlapping availability on Tuesday and Thursday evenings for collaborative coding.',
+      'Complementary synchronous working style and hands-on problem-solving preferences.',
     ],
     inputsExplained:
-      'Calculated from tech stack overlap, weekly free hours, project scope, and preferred commit habits.',
+      'Illustrative demonstration calculated from skills (30%), goals (20%), project experience (15%), academic relevance (15%), schedule (10%), and learning style (10%).',
   },
   study: {
     id: 'study',
     title: 'Study Buddies',
-    score: 94,
+    score: computeWeightedTotal(STUDY_FACTORS),
     scoreLabel: 'Study Compatibility',
     candidate: {
       name: 'Elena Rostova',
@@ -70,25 +95,21 @@ const DEMO_CONTEXTS = {
       timing: 'Midterm 2 & Problem Set Deadlines',
       requiredStack: ['Vector Spaces', 'Eigenvalues', 'Proof Techniques'],
     },
-    factors: [
-      { label: 'Course & Section Overlap', value: 100 },
-      { label: 'Study Schedule Overlap', value: 90 },
-      { label: 'Learning Style Synergy', value: 92 },
-      { label: 'Target Exam Pacing', value: 95 },
-    ],
+    factors: STUDY_FACTORS,
     reasons: [
-      'Enrolled in the same course section (MATH 214) with identical problem set schedules.',
-      'Matching study windows every Monday and Wednesday afternoon (3:00–5:30 PM).',
-      'Compatible rhythm: individual problem attempts followed by collaborative proof verification.',
-      'Shared academic target: mastering vector space proofs ahead of Midterm 2.',
+      'Identical course enrollment: both students taking Linear Algebra (MATH 214).',
+      'Compatible learning style: both favor discussion and active problem-solving.',
+      'Shared study windows on Monday and Wednesday afternoons (3:00–5:30 PM).',
+      'Aligned academic stage: both in 2nd year with similar mathematical background.',
+      'Shared goal: mastering vector space proofs ahead of upcoming midterm exams.',
     ],
     inputsExplained:
-      'Calculated from exact university course codes, shared weekly study windows, and exam dates.',
+      'Illustrative demonstration calculated from course overlap (30%), learning style (25%), schedule (20%), academic level (15%), and goals (10%).',
   },
   skillswap: {
     id: 'skillswap',
     title: 'Reciprocal SkillSwap',
-    score: 89,
+    score: computeWeightedTotal(SKILLSWAP_FACTORS),
     scoreLabel: 'SkillSwap Compatibility',
     candidate: {
       name: 'Aiden Chen',
@@ -102,20 +123,16 @@ const DEMO_CONTEXTS = {
       timing: 'Flexible weekend cadence',
       requiredStack: ['Figma ↔ Python Automation'],
     },
-    factors: [
-      { label: 'Bidirectional Need Overlap', value: 95 },
-      { label: 'Skill Depth & Symmetry', value: 88 },
-      { label: 'Exchange Availability', value: 85 },
-      { label: 'Peer Teaching Preference', value: 90 },
-    ],
+    factors: SKILLSWAP_FACTORS,
     reasons: [
-      'Exact bilateral match: Aiden teaches Figma and UI systems; you teach Python fundamentals.',
-      'Agreed 1-hour weekly reciprocal session (30 minutes per topic).',
-      'Both free Saturday mornings between 10:00 AM and 11:30 AM.',
-      'Shared practical focus: building portfolio projects rather than passive lecture reviews.',
+      'Bilateral reciprocal match: partner offers Figma/UI design and seeks Python; you offer Python and seek UI design.',
+      'Balanced skill depth: intermediate proficiencies provide mutual teaching opportunities.',
+      'Aligned learning goals: both seek hands-on portfolio projects over theoretical lecture reviews.',
+      'Exchange availability: mutual free time on weekend mornings for focused exchange sessions.',
+      'Synergistic learning style: both prefer interactive, practice-oriented peer tutoring.',
     ],
     inputsExplained:
-      'Calculated from two-way skill barter overlap: what you offer matches what they seek, and vice versa.',
+      'Illustrative demonstration calculated from reciprocal teach/want (40%), skill levels (20%), goals (15%), availability (15%), and learning style (10%).',
   },
 };
 
@@ -384,7 +401,7 @@ export function LandingPage() {
                 {requestSent ? (
                   <span className="text-xs text-text-amber font-medium flex items-center gap-1">
                     <Check className="w-3.5 h-3.5" aria-hidden="true" />
-                    Simulated request logged
+                    Demonstration request sent
                   </span>
                 ) : (
                   <Button
@@ -392,7 +409,7 @@ export function LandingPage() {
                     size="sm"
                     onClick={() => setRequestSent(true)}
                   >
-                    Simulate Connection
+                    Simulate Collaboration Request
                   </Button>
                 )}
               </div>
@@ -610,7 +627,7 @@ export function LandingPage() {
           </h2>
 
           <p className="text-sm text-text-muted leading-relaxed max-w-xl mx-auto">
-            SkillSync is launching across universities to simplify student teamwork, exam preparation, and peer skill swaps.
+            SkillSync is designed to help students discover collaboration opportunities for projects, exam preparation, and reciprocal skill learning.
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-3 pt-2">

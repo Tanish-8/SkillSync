@@ -6,7 +6,6 @@ import {
   BookMarked,
   Clock,
   ArrowRight,
-  Sliders,
   AlertCircle,
   Target,
   Calendar,
@@ -133,7 +132,7 @@ export function SkillSwapPage() {
       <section className="space-y-2">
         <div className="flex items-center gap-2">
           <span className="text-[11px] font-medium uppercase tracking-wider text-text-amber">
-            Phase 6B Reciprocal Matching
+            Reciprocal Learning
           </span>
           <Badge variant="outline" className="text-[10px]">
             Strict Bilateral Reciprocity
@@ -147,24 +146,7 @@ export function SkillSwapPage() {
         </p>
       </section>
 
-      {/* 2. ARCHITECTURAL STATUS BANNER */}
-      <section className="rounded-lg border border-border bg-bg-section p-5 space-y-3">
-        <div className="flex items-center gap-2">
-          <Sliders className="w-4 h-4 text-accent" />
-          <h2 className="font-serif text-sm font-medium text-text-main">
-            Status: Database-Backed Reciprocal SkillSwap Operational
-          </h2>
-        </div>
-        <p className="text-xs text-text-muted leading-relaxed max-w-3xl">
-          SkillSync calculates reciprocal learning partnerships deterministically at{' '}
-          <code className="text-[11px] bg-bg-card px-1.5 py-0.5 rounded border border-border text-text-main">
-            GET /api/matching/recommendations/skillswap
-          </code>
-          . Bilateral reciprocity is strictly enforced: one-way matches earn 0% for reciprocal teach/want and are filtered out. Scores evaluate Reciprocal Exchange (40%), Skill Depth (20%), Goals (15%), Availability (15%), and Learning Style (10%).
-        </p>
-      </section>
-
-      {/* 3. COMPATIBILITY FACTORS SUMMARY */}
+      {/* 2. COMPATIBILITY FACTORS SUMMARY */}
       <section className="space-y-4">
         <div className="flex items-baseline justify-between">
           <h2 className="font-serif text-lg font-medium text-text-main">
@@ -393,7 +375,7 @@ export function SkillSwapPage() {
         {/* Incomplete Profile State */}
         {recCompleteness && !recCompleteness.isComplete ? (
           <IncompleteProfileBanner
-            trackName="SkillSwap Reciprocal Matching"
+            trackName="SkillSwap Reciprocal Learning"
             missingFields={recCompleteness.missingFields}
           />
         ) : loadingRecs ? (

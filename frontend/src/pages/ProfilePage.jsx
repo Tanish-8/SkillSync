@@ -705,14 +705,16 @@ export function ProfilePage() {
               Relevant Academic Subjects & Coursework
             </label>
             <div className="flex gap-2">
-              <Input
-                value={subjectInput}
-                onChange={(e) => setSubjectInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag('subject'))}
-                placeholder="e.g. Algorithms, Distributed Systems, Database Systems"
-                className="text-xs"
-              />
-              <Button type="button" onClick={() => handleAddTag('subject')} size="sm" variant="outline">
+              <div className="flex-1 min-w-0">
+                <Input
+                  value={subjectInput}
+                  onChange={(e) => setSubjectInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag('subject'))}
+                  placeholder="e.g. Algorithms, Distributed Systems, Database Systems"
+                  className="text-xs"
+                />
+              </div>
+              <Button type="button" onClick={() => handleAddTag('subject')} size="sm" variant="outline" className="shrink-0 whitespace-nowrap">
                 <Plus className="w-3.5 h-3.5 mr-1" /> Add Subject
               </Button>
             </div>
@@ -870,14 +872,14 @@ export function ProfilePage() {
 
           {/* Declared Skills */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <div>
                 <span className="text-xs font-medium text-text-main block">Offered Skills & Proficiency</span>
                 <span className="text-[11px] text-text-muted">
                   Used for Project matching (30%) and SkillSwap teaching coverage (40%).
                 </span>
               </div>
-              <Button type="button" onClick={handleAddSkill} size="sm" variant="outline">
+              <Button type="button" onClick={handleAddSkill} size="sm" variant="outline" className="shrink-0 whitespace-nowrap">
                 <Plus className="w-3.5 h-3.5 mr-1" /> Add Skill
               </Button>
             </div>
@@ -885,16 +887,18 @@ export function ProfilePage() {
             <div className="space-y-2">
               {skills.map((skill, index) => (
                 <div key={index} className="flex items-center gap-2">
-                  <Input
-                    value={skill.name}
-                    onChange={(e) => handleUpdateSkill(index, 'name', e.target.value)}
-                    placeholder="Skill name (e.g. Python, React, PyTorch)"
-                    className="text-xs flex-1"
-                  />
+                  <div className="flex-1 min-w-0">
+                    <Input
+                      value={skill.name}
+                      onChange={(e) => handleUpdateSkill(index, 'name', e.target.value)}
+                      placeholder="Skill name (e.g. Python, React, PyTorch)"
+                      className="text-xs"
+                    />
+                  </div>
                   <select
                     value={skill.level}
                     onChange={(e) => handleUpdateSkill(index, 'level', e.target.value)}
-                    className="text-xs rounded-md border border-border bg-bg-card px-3 py-2 text-text-main w-44"
+                    className="text-xs rounded-md border border-border bg-bg-card px-3 py-2 text-text-main w-36 sm:w-44 shrink-0"
                   >
                     {[1, 2, 3, 4, 5].map((lvl) => (
                       <option key={lvl} value={lvl}>
@@ -905,7 +909,7 @@ export function ProfilePage() {
                   <button
                     type="button"
                     onClick={() => handleRemoveSkill(index)}
-                    className="p-2 text-text-muted hover:text-red-500 rounded"
+                    className="p-2 text-text-muted hover:text-red-500 rounded shrink-0"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -991,14 +995,16 @@ export function ProfilePage() {
           <div className="space-y-2">
             <label className="text-xs font-medium text-text-main">Project & Collaboration Goals</label>
             <div className="flex gap-2">
-              <Input
-                value={goalInput}
-                onChange={(e) => setGoalInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag('goal'))}
-                placeholder="e.g. portfolio, capstone, hackathon, publication"
-                className="text-xs"
-              />
-              <Button type="button" onClick={() => handleAddTag('goal')} size="sm" variant="outline">
+              <div className="flex-1 min-w-0">
+                <Input
+                  value={goalInput}
+                  onChange={(e) => setGoalInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag('goal'))}
+                  placeholder="e.g. portfolio, capstone, hackathon, publication"
+                  className="text-xs"
+                />
+              </div>
+              <Button type="button" onClick={() => handleAddTag('goal')} size="sm" variant="outline" className="shrink-0 whitespace-nowrap">
                 <Plus className="w-3.5 h-3.5 mr-1" /> Add Goal
               </Button>
             </div>
@@ -1045,14 +1051,16 @@ export function ProfilePage() {
           <div className="space-y-2">
             <label className="text-xs font-medium text-text-main">Active Study Topics</label>
             <div className="flex gap-2">
-              <Input
-                value={topicInput}
-                onChange={(e) => setTopicInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag('topic'))}
-                placeholder="e.g. binary_trees, dynamic_programming, sql_indexing"
-                className="text-xs"
-              />
-              <Button type="button" onClick={() => handleAddTag('topic')} size="sm" variant="outline">
+              <div className="flex-1 min-w-0">
+                <Input
+                  value={topicInput}
+                  onChange={(e) => setTopicInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag('topic'))}
+                  placeholder="e.g. binary_trees, dynamic_programming, sql_indexing"
+                  className="text-xs"
+                />
+              </div>
+              <Button type="button" onClick={() => handleAddTag('topic')} size="sm" variant="outline" className="shrink-0 whitespace-nowrap">
                 <Plus className="w-3.5 h-3.5 mr-1" /> Add Topic
               </Button>
             </div>
@@ -1075,14 +1083,16 @@ export function ProfilePage() {
           <div className="space-y-2">
             <label className="text-xs font-medium text-text-main">Study Method Preferences</label>
             <div className="flex gap-2">
-              <Input
-                value={prefInput}
-                onChange={(e) => setPrefInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag('pref'))}
-                placeholder="e.g. problem_solving, whiteboard_sessions, mock_quizzes"
-                className="text-xs"
-              />
-              <Button type="button" onClick={() => handleAddTag('pref')} size="sm" variant="outline">
+              <div className="flex-1 min-w-0">
+                <Input
+                  value={prefInput}
+                  onChange={(e) => setPrefInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag('pref'))}
+                  placeholder="e.g. problem_solving, whiteboard_sessions, mock_quizzes"
+                  className="text-xs"
+                />
+              </div>
+              <Button type="button" onClick={() => handleAddTag('pref')} size="sm" variant="outline" className="shrink-0 whitespace-nowrap">
                 <Plus className="w-3.5 h-3.5 mr-1" /> Add Method
               </Button>
             </div>
@@ -1116,14 +1126,14 @@ export function ProfilePage() {
 
           {/* Desired Skills */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <div>
                 <span className="text-xs font-medium text-text-main block">Skills You Want to Learn</span>
                 <span className="text-[11px] text-text-muted">
                   SkillSwap strictly requires mutual reciprocation: you teach what your peer wants, and they teach what you want.
                 </span>
               </div>
-              <Button type="button" onClick={handleAddDesiredSkill} size="sm" variant="outline">
+              <Button type="button" onClick={handleAddDesiredSkill} size="sm" variant="outline" className="shrink-0 whitespace-nowrap">
                 <Plus className="w-3.5 h-3.5 mr-1" /> Add Desired Skill
               </Button>
             </div>
@@ -1131,16 +1141,18 @@ export function ProfilePage() {
             <div className="space-y-2">
               {desiredSkills.map((desired, index) => (
                 <div key={index} className="flex items-center gap-2">
-                  <Input
-                    value={desired.name}
-                    onChange={(e) => handleUpdateDesiredSkill(index, 'name', e.target.value)}
-                    placeholder="Desired skill (e.g. Flutter, Docker, Figma)"
-                    className="text-xs flex-1"
-                  />
+                  <div className="flex-1 min-w-0">
+                    <Input
+                      value={desired.name}
+                      onChange={(e) => handleUpdateDesiredSkill(index, 'name', e.target.value)}
+                      placeholder="Desired skill (e.g. Flutter, Docker, Figma)"
+                      className="text-xs"
+                    />
+                  </div>
                   <select
                     value={desired.targetLevel}
                     onChange={(e) => handleUpdateDesiredSkill(index, 'targetLevel', e.target.value)}
-                    className="text-xs rounded-md border border-border bg-bg-card px-3 py-2 text-text-main w-44"
+                    className="text-xs rounded-md border border-border bg-bg-card px-3 py-2 text-text-main w-36 sm:w-44 shrink-0"
                   >
                     {[1, 2, 3, 4, 5].map((lvl) => (
                       <option key={lvl} value={lvl}>
@@ -1151,7 +1163,7 @@ export function ProfilePage() {
                   <button
                     type="button"
                     onClick={() => handleRemoveDesiredSkill(index)}
-                    className="p-2 text-text-muted hover:text-red-500 rounded"
+                    className="p-2 text-text-muted hover:text-red-500 rounded shrink-0"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -1196,14 +1208,14 @@ export function ProfilePage() {
 
           {/* Past Projects */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <div>
                 <span className="text-xs font-medium text-text-main block">Previous Projects & Experience</span>
                 <span className="text-[11px] text-text-muted">
                   Used directly in Project Compatibility (15%) to assess practical experience in required technologies.
                 </span>
               </div>
-              <Button type="button" onClick={handleAddPreviousProject} size="sm" variant="outline">
+              <Button type="button" onClick={handleAddPreviousProject} size="sm" variant="outline" className="shrink-0 whitespace-nowrap">
                 <Plus className="w-3.5 h-3.5 mr-1" /> Add Past Project
               </Button>
             </div>
@@ -1266,14 +1278,14 @@ export function ProfilePage() {
 
           {/* Project Ideas */}
           <div className="space-y-3 pt-4 border-t border-border">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <div>
                 <span className="text-xs font-medium text-text-main block">Project Ideas & Pitches</span>
                 <span className="text-[11px] text-text-muted">
                   Proposals and concepts you are looking to recruit classmates or teammates for.
                 </span>
               </div>
-              <Button type="button" onClick={handleAddProjectIdea} size="sm" variant="outline">
+              <Button type="button" onClick={handleAddProjectIdea} size="sm" variant="outline" className="shrink-0 whitespace-nowrap">
                 <Plus className="w-3.5 h-3.5 mr-1" /> Add Idea
               </Button>
             </div>
@@ -1331,15 +1343,17 @@ export function ProfilePage() {
           <div className="space-y-2">
             <label className="text-xs font-medium text-text-main">Achievements & Honors</label>
             <div className="flex gap-2">
-              <Input
-                value={achievementInput}
-                onChange={(e) => setAchievementInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag('achievement'))}
-                placeholder="e.g. 1st Place Hackathon, Dean's Honor Roll, AWS Certified Developer"
-                className="text-xs"
-              />
-              <Button type="button" onClick={() => handleAddTag('achievement')} size="sm" variant="outline">
-                <Plus className="w-3.5 h-3.5 mr-1" /> Add
+              <div className="flex-1 min-w-0">
+                <Input
+                  value={achievementInput}
+                  onChange={(e) => setAchievementInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag('achievement'))}
+                  placeholder="e.g. 1st Place Hackathon, Dean's Honor Roll, AWS Certified Developer"
+                  className="text-xs"
+                />
+              </div>
+              <Button type="button" onClick={() => handleAddTag('achievement')} size="sm" variant="outline" className="shrink-0 whitespace-nowrap">
+                <Plus className="w-3.5 h-3.5 mr-1" /> Add Achievement
               </Button>
             </div>
             <div className="flex flex-wrap gap-1.5 pt-1">
@@ -1361,14 +1375,16 @@ export function ProfilePage() {
           <div className="space-y-2">
             <label className="text-xs font-medium text-text-main">Communication & Workflow Preferences</label>
             <div className="flex gap-2">
-              <Input
-                value={collabInput}
-                onChange={(e) => setCollabInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag('collab'))}
-                placeholder="e.g. Slack-first, Async code reviews, Weekend pairing only, UTC-5"
-                className="text-xs"
-              />
-              <Button type="button" onClick={() => handleAddTag('collab')} size="sm" variant="outline">
+              <div className="flex-1 min-w-0">
+                <Input
+                  value={collabInput}
+                  onChange={(e) => setCollabInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag('collab'))}
+                  placeholder="e.g. Slack-first, Async code reviews, Weekend pairing only, UTC-5"
+                  className="text-xs"
+                />
+              </div>
+              <Button type="button" onClick={() => handleAddTag('collab')} size="sm" variant="outline" className="shrink-0 whitespace-nowrap">
                 <Plus className="w-3.5 h-3.5 mr-1" /> Add Preference
               </Button>
             </div>

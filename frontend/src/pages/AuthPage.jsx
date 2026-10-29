@@ -526,7 +526,7 @@ export function AuthPage({ theme, toggleTheme }) {
                   New Student Registration
                 </span>
                 <h1 className="font-serif text-2xl sm:text-3xl font-medium text-text-main">
-                  Create your profile
+                  Create your student account
                 </h1>
                 <p className="text-xs text-text-muted leading-relaxed">
                   Join university collaboration tracks for projects, study groups, and skill exchanges.
@@ -650,13 +650,13 @@ export function AuthPage({ theme, toggleTheme }) {
             <div className="max-w-sm mx-auto w-full space-y-6">
               <div className="space-y-1.5">
                 <span className="text-[11px] font-medium text-text-amber uppercase tracking-wider">
-                  Academic Sign In
+                  Student Sign In
                 </span>
                 <h1 className="font-serif text-2xl sm:text-3xl font-medium text-text-main">
                   Welcome back
                 </h1>
                 <p className="text-xs text-text-muted leading-relaxed">
-                  Enter your credentials to access your active teams, study sessions, and swaps.
+                  Sign in to manage your student profile, view recommendations, and track collaboration requests.
                 </p>
               </div>
 

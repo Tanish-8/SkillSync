@@ -96,7 +96,7 @@ export function Footer() {
         {/* Concise Privacy Statement & Copyright */}
         <div className="pt-8 border-t border-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-xs text-text-muted">
           <p className="max-w-2xl leading-relaxed">
-            <strong className="text-text-main font-medium">Privacy Commitment:</strong> SkillSync matches students based only on self-declared courses, schedules, and skills. Profiles and match data are strictly used for academic collaboration and are never sold or shared with commercial entities.
+            <strong className="text-text-main font-medium">Matching Privacy:</strong> SkillSync calculates compatibility using only self-declared student skills, schedules, and academic interests to facilitate peer collaboration within the workspace.
           </p>
 
           <div className="shrink-0">

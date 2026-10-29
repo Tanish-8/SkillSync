@@ -8,7 +8,6 @@ import {
   ArrowRight,
   AlertCircle,
   CheckCircle2,
-  Sliders,
   Plus,
   Trash2,
   Edit3,
@@ -576,11 +575,8 @@ export function ProjectsPage() {
       <section className="space-y-2">
         <div className="flex items-center gap-2">
           <span className="text-[11px] font-medium uppercase tracking-wider text-text-amber">
-            Collaboration Track
+            Project Collaboration
           </span>
-          <Badge variant="outline" className="text-[10px]">
-            API Operational
-          </Badge>
         </div>
         <h1 className="font-serif text-2xl sm:text-3xl font-medium tracking-tight text-text-main">
           Project Teammates & Capstones
@@ -590,24 +586,7 @@ export function ProjectsPage() {
         </p>
       </section>
 
-      {/* 2. ARCHITECTURAL STATUS BANNER */}
-      <section className="rounded-lg border border-border bg-bg-section p-5 space-y-3">
-        <div className="flex items-center gap-2">
-          <Sliders className="w-4 h-4 text-accent" />
-          <h2 className="font-serif text-sm font-medium text-text-main">
-            Status: Database-Backed Compatibility Engine Operational
-          </h2>
-        </div>
-        <p className="text-xs text-text-muted leading-relaxed max-w-3xl">
-          SkillSync calculates real-time project recommendations deterministically across 6 calibrated factors from your saved profile inputs against open MongoDB projects at{' '}
-          <code className="text-[11px] bg-bg-card px-1.5 py-0.5 rounded border border-border text-text-main">
-            GET /api/matching/recommendations/projects
-          </code>
-          . Scores and grounded explanations reflect actual compatibility without artificial estimates.
-        </p>
-      </section>
-
-      {/* 3. YOUR PROJECT MATCHING INPUTS (Live Profile Context) */}
+      {/* 2. YOUR PROJECT MATCHING INPUTS (Live Profile Context) */}
       <section className="space-y-4">
         <div className="flex items-baseline justify-between">
           <h2 className="font-serif text-lg font-medium text-text-main">
