@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "test": "node --test test/**/*.test.js"
+    "test": "node --test test/**/*.test.js",
+    "seed:demo": "node scripts/seedDemoData.js",
+    "seed:clean": "node scripts/seedDemoData.js --clean"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
